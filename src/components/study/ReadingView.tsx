@@ -79,7 +79,6 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
   const handleTextSelection = () => {
     const selection = window.getSelection();
     if (selection && selection.toString().trim()) {
@@ -200,6 +199,34 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
     setUrlHistory(prev => [...prev, resolvedUrl]);
     setCurrentUrl(resolvedUrl);
   };
+
+  // Intercept link clicks in HTML content for internal navigation
+  useEffect(() => {
+    if (!contentRef.current || viewMode !== 'html' || !highlightedHtml) return;
+
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+      if (!anchor) return;
+
+      const href = anchor.getAttribute('href');
+      if (!href) return;
+
+      // Allow anchor links to work normally
+      if (href.startsWith('#')) return;
+
+      // Prevent default and handle internal navigation
+      e.preventDefault();
+      handleInternalLink(href);
+    };
+
+    const container = contentRef.current;
+    container.addEventListener('click', handleLinkClick);
+
+    return () => {
+      container.removeEventListener('click', handleLinkClick);
+    };
+  }, [viewMode, highlightedHtml, currentUrl]);
 
   const handleBackNavigation = () => {
     if (urlHistory.length > 1) {

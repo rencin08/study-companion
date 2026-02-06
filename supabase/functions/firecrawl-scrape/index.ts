@@ -45,9 +45,9 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         url: formattedUrl,
-        formats: ['markdown', 'html'],
-        onlyMainContent: true, // Focus on main content, exclude navigation
-        waitFor: 5000, // Wait 5s for JS content to fully render
+        formats: ['markdown', 'html', 'rawHtml'],
+        onlyMainContent: true,
+        waitFor: 5000,
       }),
     });
 
@@ -93,14 +93,17 @@ serve(async (req) => {
     // Trim and clean up extra whitespace
     markdown = markdown.trim().replace(/\n{3,}/g, '\n\n');
 
-    console.log('Scrape successful, cleaned content length:', markdown.length);
+    // Get HTML content - try html first, then rawHtml
+    const htmlContent = data.data?.html || data.html || data.data?.rawHtml || data.rawHtml || null;
+
+    console.log('Scrape successful, markdown length:', markdown.length, ', html length:', htmlContent?.length || 0);
     
-    // Return both markdown and metadata
+    // Return both markdown, html, and metadata
     return new Response(
       JSON.stringify({
         success: true,
         markdown,
-        html: data.data?.html || data.html,
+        html: htmlContent,
         metadata: data.data?.metadata || data.metadata,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
