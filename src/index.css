@@ -299,33 +299,39 @@
 
   /* Article content - renders original HTML styling */
   .article-content {
-    @apply text-foreground leading-relaxed;
-    font-size: 1rem;
-    line-height: 1.75;
+    @apply text-foreground;
+    font-size: 1.0625rem;
+    line-height: 1.8;
+    word-spacing: 0.05em;
+  }
+
+  .article-content * {
+    max-width: 100%;
   }
 
   .article-content h1 {
-    @apply text-3xl font-bold mt-8 mb-4 font-serif;
+    @apply text-3xl font-bold mt-10 mb-6 font-serif leading-tight;
   }
 
   .article-content h2 {
-    @apply text-2xl font-semibold mt-6 mb-3 font-serif;
+    @apply text-2xl font-semibold mt-8 mb-4 font-serif leading-snug;
   }
 
   .article-content h3 {
-    @apply text-xl font-medium mt-5 mb-2 font-serif;
+    @apply text-xl font-medium mt-6 mb-3 font-serif leading-snug;
   }
 
   .article-content h4, .article-content h5, .article-content h6 {
-    @apply text-lg font-medium mt-4 mb-2;
+    @apply text-lg font-medium mt-5 mb-3 leading-snug;
   }
 
   .article-content p {
-    @apply mb-4;
+    @apply mb-5;
+    line-height: 1.8;
   }
 
   .article-content ul, .article-content ol {
-    @apply mb-4 pl-6 list-outside;
+    @apply mb-5 pl-8 list-outside space-y-2;
   }
 
   .article-content ul {
@@ -337,6 +343,11 @@
   }
 
   .article-content li {
+    @apply mb-2 pl-1;
+    line-height: 1.7;
+  }
+
+  .article-content li p {
     @apply mb-2;
   }
 
@@ -345,7 +356,7 @@
   }
 
   .article-content img {
-    @apply max-w-full h-auto rounded-lg my-4;
+    @apply max-w-full h-auto rounded-lg my-6;
   }
 
   .article-content pre, .article-content code {
@@ -353,7 +364,7 @@
   }
 
   .article-content pre {
-    @apply p-4 overflow-x-auto my-4;
+    @apply p-4 overflow-x-auto my-6 whitespace-pre-wrap;
   }
 
   .article-content pre code {
@@ -361,15 +372,15 @@
   }
 
   .article-content blockquote {
-    @apply border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground;
+    @apply border-l-4 border-primary/30 pl-5 py-2 my-6 italic text-muted-foreground;
   }
 
   .article-content table {
-    @apply w-full border-collapse my-4;
+    @apply w-full border-collapse my-6;
   }
 
   .article-content th, .article-content td {
-    @apply border border-border px-3 py-2 text-left;
+    @apply border border-border px-4 py-3 text-left;
   }
 
   .article-content th {
@@ -377,7 +388,27 @@
   }
 
   .article-content hr {
-    @apply my-8 border-border;
+    @apply my-10 border-border;
+  }
+
+  /* Add spacing between adjacent elements */
+  .article-content > * + * {
+    margin-top: 1.25rem;
+  }
+
+  .article-content > h1 + *,
+  .article-content > h2 + *,
+  .article-content > h3 + * {
+    margin-top: 0.75rem;
+  }
+
+  /* Handle divs that wrap content */
+  .article-content div {
+    @apply mb-4;
+  }
+
+  .article-content div:empty {
+    display: none;
   }
 
   /* Remove scripts, styles, and other non-content elements */
@@ -387,6 +418,9 @@
   .article-content header,
   .article-content footer,
   .article-content aside,
+  .article-content button,
+  .article-content [role="navigation"],
+  .article-content [aria-hidden="true"],
   .article-content iframe:not([src*="youtube"]):not([src*="vimeo"]) {
     display: none !important;
   }
@@ -394,6 +428,18 @@
   /* Responsive videos */
   .article-content iframe[src*="youtube"],
   .article-content iframe[src*="vimeo"] {
-    @apply w-full aspect-video rounded-lg my-4;
+    @apply w-full aspect-video rounded-lg my-6;
+  }
+
+  /* Handle spans and inline elements */
+  .article-content span {
+    display: inline;
+  }
+
+  /* Reset any inline styles that might cause issues */
+  .article-content [style*="margin: 0"],
+  .article-content [style*="padding: 0"] {
+    margin: revert;
+    padding: revert;
   }
 }
