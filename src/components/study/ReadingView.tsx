@@ -1,0 +1,339 @@
+import { useState, useRef } from 'react';
+import { Reading, ChatMessage, Flashcard, Note } from '@/types/study';
+import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface ReadingViewProps {
+  reading: Reading;
+  weekTitle: string;
+  onBack: () => void;
+  onCreateFlashcard: (flashcard: Omit<Flashcard, 'id' | 'createdAt'>) => void;
+}
+
+export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard }: ReadingViewProps) {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [currentNote, setCurrentNote] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      role: 'assistant',
+      content: `Hi! I'm here to help you understand "${reading.title}". Feel free to ask me any questions about the content, request summaries, or ask me to explain concepts in simpler terms.`,
+      timestamp: new Date()
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
+  const [showFlashcardModal, setShowFlashcardModal] = useState(false);
+  const [flashcardFront, setFlashcardFront] = useState('');
+  const [flashcardBack, setFlashcardBack] = useState('');
+
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim()) {
+      setSelectedText(selection.toString().trim());
+    }
+  };
+
+  const handleCreateFlashcard = () => {
+    if (flashcardFront && flashcardBack) {
+      onCreateFlashcard({
+        front: flashcardFront,
+        back: flashcardBack,
+        weekId: reading.id.split('-')[0] + '-' + reading.id.split('-')[1],
+        readingId: reading.id,
+        mastered: false
+      });
+      setFlashcardFront('');
+      setFlashcardBack('');
+      setShowFlashcardModal(false);
+      setSelectedText('');
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: inputMessage,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsTyping(true);
+
+    // Simulate AI response
+    setTimeout(() => {
+      const aiResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: generateMockResponse(inputMessage, reading.title),
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsTyping(false);
+    }, 1500);
+  };
+
+  const handleAddNote = () => {
+    if (currentNote.trim()) {
+      const newNote: Note = {
+        id: Date.now().toString(),
+        content: currentNote,
+        weekId: reading.id.split('-')[0] + '-' + reading.id.split('-')[1],
+        readingId: reading.id,
+        highlightedText: selectedText || undefined,
+        createdAt: new Date()
+      };
+      setNotes(prev => [...prev, newNote]);
+      setCurrentNote('');
+      setSelectedText('');
+    }
+  };
+
+  return (
+    <div className="h-[calc(100vh-120px)] flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={onBack} className="-ml-2">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <p className="text-sm text-muted-foreground">{weekTitle}</p>
+            <h2 className="font-serif text-xl font-semibold">{reading.title}</h2>
+          </div>
+        </div>
+        
+        {selectedText && (
+          <div className="flex items-center gap-2 bg-accent/20 px-3 py-2 rounded-lg">
+            <span className="text-sm text-muted-foreground max-w-[200px] truncate">"{selectedText}"</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setFlashcardFront(selectedText);
+                setShowFlashcardModal(true);
+              }}
+              className="text-primary"
+            >
+              <Brain className="h-4 w-4 mr-1" />
+              Create Flashcard
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedText('')}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Dual panel layout */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
+        {/* Left panel - Reading content */}
+        <div className="flex flex-col bg-card rounded-lg border border-border shadow-card overflow-hidden">
+          <div className="flex items-center gap-2 p-3 border-b border-border bg-muted/30">
+            <Highlighter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Reading Content</span>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-6" onMouseUp={handleTextSelection}>
+              {/* Embedded content or iframe */}
+              <div className="w-full h-full min-h-[500px]">
+                <iframe
+                  src={reading.url}
+                  className="w-full h-full min-h-[500px] rounded-lg border border-border"
+                  title={reading.title}
+                  sandbox="allow-same-origin allow-scripts allow-popups"
+                />
+              </div>
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Right panel - Notes & Chat */}
+        <div className="flex flex-col bg-card rounded-lg border border-border shadow-card overflow-hidden">
+          <Tabs defaultValue="chat" className="flex-1 flex flex-col">
+            <TabsList className="w-full justify-start rounded-none border-b border-border bg-muted/30 p-0 h-auto">
+              <TabsTrigger 
+                value="chat" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 px-4"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                AI Chat
+              </TabsTrigger>
+              <TabsTrigger 
+                value="notes" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 px-4"
+              >
+                <StickyNote className="h-4 w-4 mr-2" />
+                Notes ({notes.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="chat" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-4">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-lg px-4 py-3 ${
+                          message.role === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-secondary text-secondary-foreground'
+                        }`}
+                      >
+                        {message.role === 'assistant' && (
+                          <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+                            <Sparkles className="h-3 w-3" />
+                            Study Assistant
+                          </div>
+                        )}
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {isTyping && (
+                    <div className="flex justify-start">
+                      <div className="bg-secondary rounded-lg px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+              
+              <div className="p-4 border-t border-border">
+                <div className="flex gap-2">
+                  <Textarea
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    placeholder="Ask about this reading..."
+                    className="min-h-[80px] resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                  <Button onClick={handleSendMessage} className="self-end">
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="notes" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-3">
+                  {notes.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No notes yet. Start taking notes below!</p>
+                    </div>
+                  ) : (
+                    notes.map((note) => (
+                      <div key={note.id} className="p-3 bg-secondary rounded-lg">
+                        {note.highlightedText && (
+                          <div className="text-xs text-muted-foreground mb-2 border-l-2 border-accent pl-2">
+                            "{note.highlightedText}"
+                          </div>
+                        )}
+                        <p className="text-sm">{note.content}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {note.createdAt.toLocaleTimeString()}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+              
+              <div className="p-4 border-t border-border">
+                <Textarea
+                  value={currentNote}
+                  onChange={(e) => setCurrentNote(e.target.value)}
+                  placeholder="Write a note..."
+                  className="min-h-[80px] resize-none mb-2"
+                />
+                <Button onClick={handleAddNote} className="w-full">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Note
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+
+      {/* Flashcard Modal */}
+      {showFlashcardModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-xl p-6 w-full max-w-md shadow-lg animate-fade-in-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-serif text-xl font-semibold flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary" />
+                Create Flashcard
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowFlashcardModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">Front (Question)</label>
+                <Textarea
+                  value={flashcardFront}
+                  onChange={(e) => setFlashcardFront(e.target.value)}
+                  placeholder="What you want to remember..."
+                  className="resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">Back (Answer)</label>
+                <Textarea
+                  value={flashcardBack}
+                  onChange={(e) => setFlashcardBack(e.target.value)}
+                  placeholder="The answer or explanation..."
+                  className="resize-none"
+                />
+              </div>
+              <Button onClick={handleCreateFlashcard} className="w-full">
+                Create Flashcard
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function generateMockResponse(question: string, readingTitle: string): string {
+  const responses = [
+    `Great question about "${readingTitle}"! The key concept here is that modern AI tools are transforming how we approach software development. Instead of writing code from scratch, we're moving towards a cycle of planning, generating with AI, modifying, and iterating.`,
+    `That's an interesting point to explore. In the context of this reading, the main takeaway is that AI-assisted development isn't about replacing developers, but about augmenting their capabilities. This allows engineers to focus on higher-level design and problem-solving.`,
+    `Let me break that down for you. The reading discusses how LLMs can understand context, generate code, and even debug issues. The key is learning how to effectively communicate with these tools through good prompting techniques.`,
+    `Based on the reading, this relates to the concept of "prompt engineering" - the art of crafting inputs that help AI models produce better outputs. It's becoming a crucial skill for modern developers.`,
+  ];
+  return responses[Math.floor(Math.random() * responses.length)];
+}
