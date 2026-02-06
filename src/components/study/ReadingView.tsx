@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { Reading, ChatMessage, Flashcard, Note, Highlight } from '@/types/study';
-import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HighlightToolbar } from './HighlightToolbar';
-import { useProxyContent } from '@/hooks/useProxyContent';
+import { useFirecrawlScrape } from '@/hooks/useFirecrawlScrape';
 import { useAIChat } from '@/hooks/useAIChat';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ReadingViewProps {
   reading: Reading;
@@ -29,13 +31,13 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   const contentRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Proxy content from external URL
-  const { html: proxiedContent, isLoading: isLoadingContent, error: contentError } = useProxyContent(reading.url);
+  // Use Firecrawl for content scraping
+  const { markdown, metadata, isLoading: isLoadingContent, error: contentError } = useFirecrawlScrape(reading.url);
 
-  // AI Chat hook
+  // AI Chat hook with scraped content context
   const { messages, isLoading: isTyping, sendMessage, setMessages } = useAIChat({
     readingTitle: reading.title,
-    readingContent: proxiedContent ? extractTextContent(proxiedContent) : undefined
+    readingContent: markdown || undefined
   });
 
   // Initialize welcome message
@@ -161,6 +163,16 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
               Create Flashcard
             </Button>
           )}
+
+          <a
+            href={reading.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ExternalLink className="h-4 w-4" />
+            <span className="hidden sm:inline">Original</span>
+          </a>
         </div>
       </div>
 
@@ -197,16 +209,17 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
               {isLoadingContent ? (
                 <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
                   <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                  <p>Loading content...</p>
+                  <p>Extracting content...</p>
+                  <p className="text-xs mt-2">This may take a few seconds</p>
                 </div>
-              ) : contentError || !proxiedContent ? (
+              ) : contentError || !markdown ? (
                 <div className="flex flex-col items-center justify-center h-[400px] text-center">
                   <div className="bg-muted/50 rounded-full p-4 mb-4">
                     <Highlighter className="h-8 w-8 text-muted-foreground" />
                   </div>
                   <h3 className="font-semibold text-lg mb-2">Content Preview Unavailable</h3>
                   <p className="text-muted-foreground mb-4 max-w-md">
-                    This content cannot be displayed directly due to the source website's security settings.
+                    {contentError || "This content cannot be extracted. Please view the original."}
                   </p>
                   <a 
                     href={reading.url} 
@@ -221,10 +234,11 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                   </p>
                 </div>
               ) : (
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: proxiedContent }}
-                />
+                <div className="prose prose-sm max-w-none dark:prose-invert selection:bg-yellow-200 selection:text-black">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {markdown}
+                  </ReactMarkdown>
+                </div>
               )}
             </div>
           </ScrollArea>
@@ -397,11 +411,4 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
       )}
     </div>
   );
-}
-
-// Helper to extract plain text from HTML for AI context
-function extractTextContent(html: string): string {
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = html;
-  return tempDiv.textContent || tempDiv.innerText || '';
 }
