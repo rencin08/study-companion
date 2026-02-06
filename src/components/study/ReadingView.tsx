@@ -199,32 +199,32 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                   <Loader2 className="h-8 w-8 animate-spin mb-4" />
                   <p>Loading content...</p>
                 </div>
-              ) : contentError ? (
-                <div className="flex flex-col items-center justify-center h-[400px]">
-                  <p className="text-destructive mb-4">Failed to load content</p>
+              ) : contentError || !proxiedContent ? (
+                <div className="flex flex-col items-center justify-center h-[400px] text-center">
+                  <div className="bg-muted/50 rounded-full p-4 mb-4">
+                    <Highlighter className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">Content Preview Unavailable</h3>
+                  <p className="text-muted-foreground mb-4 max-w-md">
+                    This content cannot be displayed directly due to the source website's security settings.
+                  </p>
                   <a 
                     href={reading.url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline"
+                    className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
                   >
                     Open in new tab →
                   </a>
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Tip: You can still take notes and chat with AI about this reading
+                  </p>
                 </div>
-              ) : proxiedContent ? (
+              ) : (
                 <div 
                   className="prose prose-sm max-w-none dark:prose-invert"
                   dangerouslySetInnerHTML={{ __html: proxiedContent }}
                 />
-              ) : (
-                <div className="w-full h-full min-h-[500px]">
-                  <iframe
-                    src={reading.url}
-                    className="w-full h-full min-h-[500px] rounded-lg border border-border"
-                    title={reading.title}
-                    sandbox="allow-same-origin allow-scripts allow-popups"
-                  />
-                </div>
               )}
             </div>
           </ScrollArea>
