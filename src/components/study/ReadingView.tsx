@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Reading, ChatMessage, Flashcard, Note, Highlight } from '@/types/study';
-import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2, ExternalLink, Play } from 'lucide-react';
+import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2, ExternalLink, Play, FileText, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,6 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 // Helper to detect and extract YouTube video ID
 const getYouTubeVideoId = (url: string): string | null => {
@@ -44,6 +45,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   const [flashcardBack, setFlashcardBack] = useState('');
   const [currentUrl, setCurrentUrl] = useState(reading.url);
   const [urlHistory, setUrlHistory] = useState<string[]>([reading.url]);
+  const [viewMode, setViewMode] = useState<'html' | 'markdown'>('html');
   const contentRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -51,7 +53,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   const youtubeVideoId = useMemo(() => getYouTubeVideoId(currentUrl), [currentUrl]);
 
   // Use Firecrawl for content scraping - only if not a YouTube video
-  const { markdown, metadata, isLoading: isLoadingContent, error: contentError } = useFirecrawlScrape(
+  const { markdown, html, metadata, isLoading: isLoadingContent, error: contentError } = useFirecrawlScrape(
     youtubeVideoId ? '' : currentUrl // Skip scraping for YouTube URLs
   );
 
@@ -152,11 +154,11 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
     [highlights, reading.id]
   );
 
-  // Apply highlights to markdown content before rendering
-  const highlightedMarkdown = useMemo(() => {
-    if (!markdown || !currentHighlights.length) return markdown;
+  // Apply highlights to content (works for both markdown and HTML)
+  const applyHighlightsToContent = (content: string | null) => {
+    if (!content || !currentHighlights.length) return content;
     
-    let result = markdown;
+    let result = content;
     
     // Sort by length (longest first) to prevent partial replacements
     const sortedHighlights = [...currentHighlights].sort((a, b) => b.text.length - a.text.length);
@@ -179,7 +181,10 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
     }
     
     return result;
-  }, [markdown, currentHighlights]);
+  };
+
+  const highlightedMarkdown = useMemo(() => applyHighlightsToContent(markdown), [markdown, currentHighlights]);
+  const highlightedHtml = useMemo(() => applyHighlightsToContent(html), [html, currentHighlights]);
 
   const handleInternalLink = (href: string) => {
     // Resolve relative URLs to the source domain
@@ -263,235 +268,273 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
       </div>
 
 
-      {/* Dual panel layout */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
+      {/* Dual panel layout with resizable panels */}
+      <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0 rounded-lg">
         {/* Left panel - Reading content */}
-        <div className="flex flex-col bg-card rounded-lg border border-border shadow-card overflow-hidden">
-          <div className="flex items-center gap-2 p-3 border-b border-border bg-muted/30">
-            <Highlighter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Reading Content</span>
-            <span className="text-xs text-muted-foreground ml-auto">Select text to highlight or create flashcard</span>
-          </div>
-          <ScrollArea className="flex-1">
-            <div 
-              ref={contentRef}
-              className="p-6" 
-              onMouseUp={handleTextSelection}
-            >
-              {youtubeVideoId ? (
-                <div className="space-y-4">
-                  <AspectRatio ratio={16 / 9} className="bg-muted rounded-lg overflow-hidden">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${youtubeVideoId}`}
-                      title={reading.title}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="w-full h-full"
-                    />
-                  </AspectRatio>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Play className="h-4 w-4" />
-                    <span>YouTube Video</span>
-                    <a 
-                      href={currentUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-auto text-primary hover:underline"
-                    >
-                      Open on YouTube →
-                    </a>
-                  </div>
-                </div>
-              ) : isLoadingContent ? (
-                <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
-                  <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                  <p>Extracting content...</p>
-                  <p className="text-xs mt-2">This may take a few seconds</p>
-                </div>
-              ) : contentError || !markdown ? (
-                <div className="flex flex-col items-center justify-center h-[400px] text-center">
-                  <div className="bg-muted/50 rounded-full p-4 mb-4">
-                    <Highlighter className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2">Content Preview Unavailable</h3>
-                  <p className="text-muted-foreground mb-4 max-w-md">
-                    {contentError || "This content cannot be extracted. Please view the original."}
-                  </p>
-                  <a 
-                    href={reading.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
-                  >
-                    Open in new tab →
-                  </a>
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Tip: You can still take notes and chat with AI about this reading
-                  </p>
-                </div>
-              ) : (
-              <div className="prose prose-sm max-w-none dark:prose-invert selection:bg-accent selection:text-accent-foreground">
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeRaw]}
-                    components={{
-                      a: ({ href, children }) => {
-                        const isAnchorLink = href?.startsWith('#');
-                        
-                        if (isAnchorLink) {
-                          return (
-                            <a href={href} className="text-primary underline hover:text-primary/80">
-                              {children}
-                            </a>
-                          );
-                        }
-                        
-                        return (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (href) handleInternalLink(href);
-                            }}
-                            className="text-primary underline hover:text-primary/80 cursor-pointer bg-transparent border-none p-0 font-inherit text-left"
-                          >
-                            {children}
-                          </button>
-                        );
-                      },
-                    }}
-                  >
-                    {highlightedMarkdown || ''}
-                  </ReactMarkdown>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-
-        {/* Right panel - Notes & Chat */}
-        <div className="flex flex-col bg-card rounded-lg border border-border shadow-card overflow-hidden">
-          <Tabs defaultValue="chat" className="flex-1 flex flex-col">
-            <TabsList className="w-full justify-start rounded-none border-b border-border bg-muted/30 p-0 h-auto">
-              <TabsTrigger 
-                value="chat" 
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 px-4"
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                AI Chat
-              </TabsTrigger>
-              <TabsTrigger 
-                value="notes" 
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 px-4"
-              >
-                <StickyNote className="h-4 w-4 mr-2" />
-                Notes ({notes.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="chat" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[85%] rounded-lg px-4 py-3 ${
-                          message.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-secondary text-secondary-foreground'
-                        }`}
-                      >
-                        {message.role === 'assistant' && (
-                          <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
-                            <Sparkles className="h-3 w-3" />
-                            Study Assistant
-                          </div>
-                        )}
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {isTyping && messages[messages.length - 1]?.content === '' && (
-                    <div className="flex justify-start">
-                      <div className="bg-secondary rounded-lg px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
+        <ResizablePanel defaultSize={55} minSize={30}>
+          <div className="flex flex-col h-full bg-card rounded-l-lg border border-border shadow-card overflow-hidden">
+            <div className="flex items-center gap-2 p-3 border-b border-border bg-muted/30">
+              <Highlighter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Reading Content</span>
               
-              <div className="p-4 border-t border-border">
-                <div className="flex gap-2">
-                  <Textarea
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Ask about this reading..."
-                    className="min-h-[80px] resize-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    disabled={isTyping}
-                  />
-                  <Button onClick={handleSendMessage} className="self-end" disabled={isTyping}>
-                    {isTyping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {/* View mode toggle */}
+              {html && markdown && (
+                <div className="flex items-center gap-1 ml-2">
+                  <Button
+                    variant={viewMode === 'html' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setViewMode('html')}
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    Styled
+                  </Button>
+                  <Button
+                    variant={viewMode === 'markdown' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setViewMode('markdown')}
+                  >
+                    <Code className="h-3 w-3 mr-1" />
+                    Simple
                   </Button>
                 </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="notes" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-3">
-                  {notes.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>No notes yet. Start taking notes below!</p>
-                    </div>
-                  ) : (
-                    notes.map((note) => (
-                      <div key={note.id} className="p-3 bg-secondary rounded-lg">
-                        {note.highlightedText && (
-                          <div className="text-xs text-muted-foreground mb-2 border-l-2 border-accent pl-2">
-                            "{note.highlightedText}"
-                          </div>
-                        )}
-                        <p className="text-sm">{note.content}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {note.createdAt.toLocaleTimeString()}
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
+              )}
               
-              <div className="p-4 border-t border-border">
-                <Textarea
-                  value={currentNote}
-                  onChange={(e) => setCurrentNote(e.target.value)}
-                  placeholder="Write a note..."
-                  className="min-h-[80px] resize-none mb-2"
-                />
-                <Button onClick={handleAddNote} className="w-full">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Note
-                </Button>
+              <span className="text-xs text-muted-foreground ml-auto">Select text to highlight or create flashcard</span>
+            </div>
+            <ScrollArea className="flex-1">
+              <div 
+                ref={contentRef}
+                className="p-6" 
+                onMouseUp={handleTextSelection}
+              >
+                {youtubeVideoId ? (
+                  <div className="space-y-4">
+                    <AspectRatio ratio={16 / 9} className="bg-muted rounded-lg overflow-hidden">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${youtubeVideoId}`}
+                        title={reading.title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="w-full h-full"
+                      />
+                    </AspectRatio>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Play className="h-4 w-4" />
+                      <span>YouTube Video</span>
+                      <a 
+                        href={currentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-auto text-primary hover:underline"
+                      >
+                        Open on YouTube →
+                      </a>
+                    </div>
+                  </div>
+                ) : isLoadingContent ? (
+                  <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                    <p>Extracting content...</p>
+                    <p className="text-xs mt-2">This may take a few seconds</p>
+                  </div>
+                ) : contentError || (!markdown && !html) ? (
+                  <div className="flex flex-col items-center justify-center h-[400px] text-center">
+                    <div className="bg-muted/50 rounded-full p-4 mb-4">
+                      <Highlighter className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Content Preview Unavailable</h3>
+                    <p className="text-muted-foreground mb-4 max-w-md">
+                      {contentError || "This content cannot be extracted. Please view the original."}
+                    </p>
+                    <a 
+                      href={reading.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      Open in new tab →
+                    </a>
+                    <p className="text-xs text-muted-foreground mt-4">
+                      Tip: You can still take notes and chat with AI about this reading
+                    </p>
+                  </div>
+                ) : viewMode === 'html' && highlightedHtml ? (
+                  // Render HTML with original article styling
+                  <div 
+                    className="article-content selection:bg-accent selection:text-accent-foreground"
+                    dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+                  />
+                ) : (
+                  // Fallback to markdown rendering
+                  <div className="prose prose-sm max-w-none dark:prose-invert selection:bg-accent selection:text-accent-foreground">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeRaw]}
+                      components={{
+                        a: ({ href, children }) => {
+                          const isAnchorLink = href?.startsWith('#');
+                          
+                          if (isAnchorLink) {
+                            return (
+                              <a href={href} className="text-primary underline hover:text-primary/80">
+                                {children}
+                              </a>
+                            );
+                          }
+                          
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (href) handleInternalLink(href);
+                              }}
+                              className="text-primary underline hover:text-primary/80 cursor-pointer bg-transparent border-none p-0 font-inherit text-left"
+                            >
+                              {children}
+                            </button>
+                          );
+                        },
+                      }}
+                    >
+                      {highlightedMarkdown || ''}
+                    </ReactMarkdown>
+                  </div>
+                )}
               </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+            </ScrollArea>
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
+
+        {/* Right panel - Notes & Chat */}
+        <ResizablePanel defaultSize={45} minSize={25}>
+          <div className="flex flex-col h-full bg-card rounded-r-lg border-y border-r border-border shadow-card overflow-hidden">
+            <Tabs defaultValue="chat" className="flex-1 flex flex-col">
+              <TabsList className="w-full justify-start rounded-none border-b border-border bg-muted/30 p-0 h-auto">
+                <TabsTrigger 
+                  value="chat" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 px-4"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  AI Chat
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="notes" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 px-4"
+                >
+                  <StickyNote className="h-4 w-4 mr-2" />
+                  Notes ({notes.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="chat" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-4">
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] rounded-lg px-4 py-3 ${
+                            message.role === 'user'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-secondary text-secondary-foreground'
+                          }`}
+                        >
+                          {message.role === 'assistant' && (
+                            <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+                              <Sparkles className="h-3 w-3" />
+                              Study Assistant
+                            </div>
+                          )}
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {isTyping && messages[messages.length - 1]?.content === '' && (
+                      <div className="flex justify-start">
+                        <div className="bg-secondary rounded-lg px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
+                
+                <div className="p-4 border-t border-border">
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      placeholder="Ask about this reading..."
+                      className="min-h-[80px] resize-none"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      disabled={isTyping}
+                    />
+                    <Button onClick={handleSendMessage} className="self-end" disabled={isTyping}>
+                      {isTyping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="notes" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-3">
+                    {notes.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No notes yet. Start taking notes below!</p>
+                      </div>
+                    ) : (
+                      notes.map((note) => (
+                        <div key={note.id} className="p-3 bg-secondary rounded-lg">
+                          {note.highlightedText && (
+                            <div className="text-xs text-muted-foreground mb-2 border-l-2 border-accent pl-2">
+                              "{note.highlightedText}"
+                            </div>
+                          )}
+                          <p className="text-sm">{note.content}</p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {note.createdAt.toLocaleTimeString()}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+                
+                <div className="p-4 border-t border-border">
+                  <Textarea
+                    value={currentNote}
+                    onChange={(e) => setCurrentNote(e.target.value)}
+                    placeholder="Write a note..."
+                    className="min-h-[80px] resize-none mb-2"
+                  />
+                  <Button onClick={handleAddNote} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Note
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {/* Flashcard Modal */}
       {showFlashcardModal && (
