@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Reading, ChatMessage, Flashcard, Note, Highlight } from '@/types/study';
 import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -119,12 +119,88 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
 
   const getHighlightColorClass = (color: Highlight['color']) => {
     switch (color) {
-      case 'yellow': return 'bg-yellow-200';
-      case 'green': return 'bg-green-200';
-      case 'blue': return 'bg-blue-200';
-      case 'pink': return 'bg-pink-200';
-      default: return 'bg-yellow-200';
+      case 'yellow': return 'bg-yellow-200 dark:bg-yellow-900/50';
+      case 'green': return 'bg-green-200 dark:bg-green-900/50';
+      case 'blue': return 'bg-blue-200 dark:bg-blue-900/50';
+      case 'pink': return 'bg-pink-200 dark:bg-pink-900/50';
+      default: return 'bg-yellow-200 dark:bg-yellow-900/50';
     }
+  };
+
+  // Filter highlights for current reading
+  const currentHighlights = useMemo(() => 
+    highlights.filter(h => h.readingId === reading.id),
+    [highlights, reading.id]
+  );
+
+  // Apply highlights to text content
+  const applyHighlightsToText = (text: string): React.ReactNode => {
+    if (!currentHighlights.length || !text) return text;
+    
+    let result: React.ReactNode[] = [];
+    let remainingText = text;
+    let keyIndex = 0;
+    
+    // Sort highlights by length (longer first) to handle overlapping better
+    const sortedHighlights = [...currentHighlights].sort((a, b) => b.text.length - a.text.length);
+    
+    // Find all highlight positions
+    const positions: { start: number; end: number; highlight: Highlight }[] = [];
+    
+    for (const highlight of sortedHighlights) {
+      let searchStart = 0;
+      while (true) {
+        const index = text.indexOf(highlight.text, searchStart);
+        if (index === -1) break;
+        positions.push({
+          start: index,
+          end: index + highlight.text.length,
+          highlight
+        });
+        searchStart = index + 1;
+      }
+    }
+    
+    // Sort by position
+    positions.sort((a, b) => a.start - b.start);
+    
+    // Remove overlapping (keep first occurrence)
+    const nonOverlapping: typeof positions = [];
+    for (const pos of positions) {
+      const overlaps = nonOverlapping.some(p => 
+        (pos.start >= p.start && pos.start < p.end) ||
+        (pos.end > p.start && pos.end <= p.end)
+      );
+      if (!overlaps) {
+        nonOverlapping.push(pos);
+      }
+    }
+    
+    // Build result
+    let lastEnd = 0;
+    for (const pos of nonOverlapping) {
+      // Add text before highlight
+      if (pos.start > lastEnd) {
+        result.push(text.slice(lastEnd, pos.start));
+      }
+      // Add highlighted text
+      result.push(
+        <mark 
+          key={`highlight-${keyIndex++}`}
+          className={`${getHighlightColorClass(pos.highlight.color)} px-0.5 rounded-sm`}
+        >
+          {text.slice(pos.start, pos.end)}
+        </mark>
+      );
+      lastEnd = pos.end;
+    }
+    
+    // Add remaining text
+    if (lastEnd < text.length) {
+      result.push(text.slice(lastEnd));
+    }
+    
+    return result.length > 0 ? result : text;
   };
 
   const handleInternalLink = (href: string) => {
@@ -292,7 +368,20 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                             {children}
                           </button>
                         );
-                      }
+                      },
+                      // Apply highlights to text nodes
+                      p: ({ children }) => (
+                        <p>{typeof children === 'string' ? applyHighlightsToText(children) : children}</p>
+                      ),
+                      li: ({ children }) => (
+                        <li>{typeof children === 'string' ? applyHighlightsToText(children) : children}</li>
+                      ),
+                      strong: ({ children }) => (
+                        <strong>{typeof children === 'string' ? applyHighlightsToText(children) : children}</strong>
+                      ),
+                      em: ({ children }) => (
+                        <em>{typeof children === 'string' ? applyHighlightsToText(children) : children}</em>
+                      ),
                     }}
                   >
                     {markdown}
