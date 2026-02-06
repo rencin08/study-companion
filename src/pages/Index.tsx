@@ -4,17 +4,18 @@ import { StudyPlanHeader } from '@/components/study/StudyPlanHeader';
 import { WeekCard } from '@/components/study/WeekCard';
 import { WeekDetail } from '@/components/study/WeekDetail';
 import { ReadingView } from '@/components/study/ReadingView';
-import { FlashcardStudy } from '@/components/study/FlashcardStudy';
+import { ReviewHub } from '@/components/study/ReviewHub';
 import { modernSoftwareCourse, sampleFlashcards } from '@/data/courseData';
-import { WeekContent, Reading, Flashcard } from '@/types/study';
+import { WeekContent, Reading, Flashcard, Highlight } from '@/types/study';
 
-type ViewMode = 'dashboard' | 'week' | 'reading' | 'flashcards';
+type ViewMode = 'dashboard' | 'week' | 'reading' | 'review';
 
 const Index = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [selectedWeek, setSelectedWeek] = useState<WeekContent | null>(null);
   const [selectedReading, setSelectedReading] = useState<Reading | null>(null);
   const [flashcards, setFlashcards] = useState<Flashcard[]>(sampleFlashcards);
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
 
   const handleWeekClick = (week: WeekContent) => {
     setSelectedWeek(week);
@@ -37,8 +38,17 @@ const Index = () => {
     setSelectedReading(null);
   };
 
-  const handleStudyFlashcards = () => {
-    setViewMode('flashcards');
+  const handleOpenReview = () => {
+    setViewMode('review');
+  };
+
+  const handleCreateHighlight = (highlight: Omit<Highlight, 'id' | 'createdAt'>) => {
+    const newHighlight: Highlight = {
+      ...highlight,
+      id: `hl-${Date.now()}`,
+      createdAt: new Date()
+    };
+    setHighlights(prev => [...prev, newHighlight]);
   };
 
   const handleCreateFlashcard = (flashcard: Omit<Flashcard, 'id' | 'createdAt'>) => {
@@ -65,7 +75,7 @@ const Index = () => {
           <div className="animate-fade-in-up">
             <StudyPlanHeader
               plan={modernSoftwareCourse}
-              onStudyFlashcards={handleStudyFlashcards}
+              onOpenReview={handleOpenReview}
               totalFlashcards={flashcards.length}
             />
             
@@ -96,12 +106,15 @@ const Index = () => {
             weekTitle={`Week ${selectedWeek.weekNumber}: ${selectedWeek.title}`}
             onBack={handleBackToWeek}
             onCreateFlashcard={handleCreateFlashcard}
+            onCreateHighlight={handleCreateHighlight}
+            highlights={highlights.filter(h => h.readingId === selectedReading.id)}
           />
         )}
 
-        {viewMode === 'flashcards' && (
-          <FlashcardStudy
+        {viewMode === 'review' && (
+          <ReviewHub
             flashcards={flashcards}
+            weeks={modernSoftwareCourse.weeks}
             onBack={handleBackToDashboard}
             onMarkMastered={handleMarkMastered}
           />

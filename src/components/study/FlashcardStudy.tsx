@@ -8,9 +8,10 @@ interface FlashcardStudyProps {
   flashcards: Flashcard[];
   onBack: () => void;
   onMarkMastered: (id: string, mastered: boolean) => void;
+  embedded?: boolean;
 }
 
-export function FlashcardStudy({ flashcards, onBack, onMarkMastered }: FlashcardStudyProps) {
+export function FlashcardStudy({ flashcards, onBack, onMarkMastered, embedded = false }: FlashcardStudyProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [studyCards, setStudyCards] = useState<Flashcard[]>([]);
@@ -131,21 +132,36 @@ export function FlashcardStudy({ flashcards, onBack, onMarkMastered }: Flashcard
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" onClick={onBack} className="-ml-2">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">
-            {currentIndex + 1} / {studyCards.length}
-          </span>
-          <Button variant="outline" size="sm" onClick={handleShuffle}>
-            <Shuffle className="h-4 w-4 mr-2" />
-            Shuffle
+      {!embedded && (
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" onClick={onBack} className="-ml-2">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
           </Button>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              {currentIndex + 1} / {studyCards.length}
+            </span>
+            <Button variant="outline" size="sm" onClick={handleShuffle}>
+              <Shuffle className="h-4 w-4 mr-2" />
+              Shuffle
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
+      {embedded && (
+        <div className="flex items-center justify-end mb-6">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              {currentIndex + 1} / {studyCards.length}
+            </span>
+            <Button variant="outline" size="sm" onClick={handleShuffle}>
+              <Shuffle className="h-4 w-4 mr-2" />
+              Shuffle
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Progress */}
       <div className="mb-6">

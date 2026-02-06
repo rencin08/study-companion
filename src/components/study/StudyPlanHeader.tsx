@@ -1,14 +1,14 @@
 import { StudyPlan } from '@/types/study';
-import { GraduationCap, Calendar, BookOpen, Brain } from 'lucide-react';
+import { GraduationCap, Calendar, BookOpen, GraduationCap as ReviewIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface StudyPlanHeaderProps {
   plan: StudyPlan;
-  onStudyFlashcards: () => void;
+  onOpenReview: () => void;
   totalFlashcards: number;
 }
 
-export function StudyPlanHeader({ plan, onStudyFlashcards, totalFlashcards }: StudyPlanHeaderProps) {
+export function StudyPlanHeader({ plan, onOpenReview, totalFlashcards }: StudyPlanHeaderProps) {
   const totalReadings = plan.weeks.reduce((acc, week) => acc + week.readings.length, 0);
 
   return (
@@ -53,23 +53,15 @@ export function StudyPlanHeader({ plan, onStudyFlashcards, totalFlashcards }: St
               <div className="text-xs opacity-80">Readings</div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 opacity-80" />
-            <div>
-              <div className="text-2xl font-semibold">{totalFlashcards}</div>
-              <div className="text-xs opacity-80">Flashcards</div>
-            </div>
-          </div>
-
           <div className="ml-auto">
             <Button
-              onClick={onStudyFlashcards}
+              onClick={onOpenReview}
               variant="secondary"
               size="lg"
               className="bg-white/20 hover:bg-white/30 text-white border-0"
             >
-              <Brain className="h-5 w-5 mr-2" />
-              Study Flashcards
+              <ReviewIcon className="h-5 w-5 mr-2" />
+              Review ({totalFlashcards})
             </Button>
           </div>
         </div>
