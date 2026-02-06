@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
+
+const ANALYZE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-lecture`;
 
 interface SelfLectureProps {
   weeks: WeekContent[];
@@ -32,40 +35,56 @@ export function SelfLecture({ weeks, onComplete }: SelfLectureProps) {
   const handleAnalyze = async () => {
     if (!userInput.trim() || !selectedWeek) return;
 
+    const week = weeks.find(w => w.id === selectedWeek);
+    if (!week) return;
+
     setIsAnalyzing(true);
     
-    // Simulate AI analysis
-    setTimeout(() => {
-      const week = weeks.find(w => w.id === selectedWeek);
-      const mockAnalysis: SelfLectureSession = {
+    try {
+      const response = await fetch(ANALYZE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          transcript: userInput,
+          weekTitle: `Week ${week.weekNumber}: ${week.title}`,
+          topics: week.topics,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Analysis failed: ${response.status}`);
+      }
+
+      const aiAnalysis = await response.json();
+
+      const session: SelfLectureSession = {
         id: `sl-${Date.now()}`,
         weekId: selectedWeek,
         userTranscript: userInput,
-        aiAnalysis: {
-          retained: [
-            `You correctly explained the core concepts of ${week?.title}`,
-            'Good understanding of the relationship between LLMs and coding agents',
-            'Accurate description of prompt engineering techniques',
-          ],
-          forgotten: [
-            'You missed mentioning MCP (Model Context Protocol) and its role',
-            'The distinction between SAST and DAST was not covered',
-            'Agent autonomy levels were not discussed',
-          ],
-          suggestions: [
-            'Review the MCP documentation and how it enables tool use',
-            'Practice explaining the security testing approaches',
-            'Create flashcards for the topics you missed',
-          ],
-          score: 72,
-        },
+        aiAnalysis,
         createdAt: new Date(),
       };
 
-      setCurrentSession(mockAnalysis);
+      setCurrentSession(session);
+      onComplete(session);
+    } catch (error) {
+      console.error('Analysis error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to analyze';
+      
+      if (errorMessage.includes('Rate limit')) {
+        toast.error('Too many requests. Please wait a moment and try again.');
+      } else if (errorMessage.includes('credits')) {
+        toast.error('AI credits exhausted. Please add funds to continue.');
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
       setIsAnalyzing(false);
-      onComplete(mockAnalysis);
-    }, 2000);
+    }
   };
 
   const handleReset = () => {
