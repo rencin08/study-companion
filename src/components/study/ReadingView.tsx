@@ -10,6 +10,7 @@ import { useFirecrawlScrape } from '@/hooks/useFirecrawlScrape';
 import { useAIChat } from '@/hooks/useAIChat';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 
 interface ReadingViewProps {
   reading: Reading;
@@ -133,75 +134,34 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
     [highlights, reading.id]
   );
 
-  // Apply highlights to text content
-  const applyHighlightsToText = (text: string): React.ReactNode => {
-    if (!currentHighlights.length || !text) return text;
+  // Apply highlights to markdown content before rendering
+  const highlightedMarkdown = useMemo(() => {
+    if (!markdown || !currentHighlights.length) return markdown;
     
-    let result: React.ReactNode[] = [];
-    let remainingText = text;
-    let keyIndex = 0;
+    let result = markdown;
     
-    // Sort highlights by length (longer first) to handle overlapping better
+    // Sort by length (longest first) to prevent partial replacements
     const sortedHighlights = [...currentHighlights].sort((a, b) => b.text.length - a.text.length);
     
-    // Find all highlight positions
-    const positions: { start: number; end: number; highlight: Highlight }[] = [];
-    
     for (const highlight of sortedHighlights) {
-      let searchStart = 0;
-      while (true) {
-        const index = text.indexOf(highlight.text, searchStart);
-        if (index === -1) break;
-        positions.push({
-          start: index,
-          end: index + highlight.text.length,
-          highlight
-        });
-        searchStart = index + 1;
-      }
+      // Escape special regex characters in the highlight text
+      const escapedText = highlight.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      
+      // Create color class based on highlight color
+      const colorStyle = {
+        yellow: 'background-color: #fef08a;',
+        green: 'background-color: #bbf7d0;',
+        blue: 'background-color: #bfdbfe;',
+        pink: 'background-color: #fbcfe8;',
+      }[highlight.color] || 'background-color: #fef08a;';
+      
+      // Replace text with marked version (using HTML mark tags)
+      const regex = new RegExp(`(${escapedText})`, 'g');
+      result = result.replace(regex, `<mark style="${colorStyle} padding: 0 2px; border-radius: 2px;">$1</mark>`);
     }
     
-    // Sort by position
-    positions.sort((a, b) => a.start - b.start);
-    
-    // Remove overlapping (keep first occurrence)
-    const nonOverlapping: typeof positions = [];
-    for (const pos of positions) {
-      const overlaps = nonOverlapping.some(p => 
-        (pos.start >= p.start && pos.start < p.end) ||
-        (pos.end > p.start && pos.end <= p.end)
-      );
-      if (!overlaps) {
-        nonOverlapping.push(pos);
-      }
-    }
-    
-    // Build result
-    let lastEnd = 0;
-    for (const pos of nonOverlapping) {
-      // Add text before highlight
-      if (pos.start > lastEnd) {
-        result.push(text.slice(lastEnd, pos.start));
-      }
-      // Add highlighted text
-      result.push(
-        <mark 
-          key={`highlight-${keyIndex++}`}
-          className={`${getHighlightColorClass(pos.highlight.color)} px-0.5 rounded-sm`}
-        >
-          {text.slice(pos.start, pos.end)}
-        </mark>
-      );
-      lastEnd = pos.end;
-    }
-    
-    // Add remaining text
-    if (lastEnd < text.length) {
-      result.push(text.slice(lastEnd));
-    }
-    
-    return result.length > 0 ? result : text;
-  };
+    return result;
+  }, [markdown, currentHighlights]);
 
   const handleInternalLink = (href: string) => {
     // Resolve relative URLs to the source domain
@@ -284,20 +244,6 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
         </div>
       </div>
 
-      {/* Highlights List */}
-      {highlights.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <span className="text-xs text-muted-foreground">Highlights:</span>
-          {highlights.map((h) => (
-            <span
-              key={h.id}
-              className={`text-xs px-2 py-1 rounded ${getHighlightColorClass(h.color)}`}
-            >
-              "{h.text.substring(0, 30)}{h.text.length > 30 ? '...' : ''}"
-            </span>
-          ))}
-        </div>
-      )}
 
       {/* Dual panel layout */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
@@ -345,6 +291,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
               <div className="prose prose-sm max-w-none dark:prose-invert selection:bg-yellow-200 selection:text-black">
                   <ReactMarkdown 
                     remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeRaw]}
                     components={{
                       a: ({ href, children }) => {
                         const isAnchorLink = href?.startsWith('#');
@@ -369,22 +316,9 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                           </button>
                         );
                       },
-                      // Apply highlights to text nodes
-                      p: ({ children }) => (
-                        <p>{typeof children === 'string' ? applyHighlightsToText(children) : children}</p>
-                      ),
-                      li: ({ children }) => (
-                        <li>{typeof children === 'string' ? applyHighlightsToText(children) : children}</li>
-                      ),
-                      strong: ({ children }) => (
-                        <strong>{typeof children === 'string' ? applyHighlightsToText(children) : children}</strong>
-                      ),
-                      em: ({ children }) => (
-                        <em>{typeof children === 'string' ? applyHighlightsToText(children) : children}</em>
-                      ),
                     }}
                   >
-                    {markdown}
+                    {highlightedMarkdown || ''}
                   </ReactMarkdown>
                 </div>
               )}
