@@ -1,0 +1,10 @@
+project_id = "lnpwjygiqzlljfpusiqg"
+
+[functions.proxy-content]
+verify_jwt = false
+
+[functions.chat]
+verify_jwt = false
+
+[functions.analyze-lecture]
+verify_jwt = false

@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Reading, ChatMessage, Flashcard, Note, Highlight } from '@/types/study';
-import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles } from 'lucide-react';
+import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HighlightToolbar } from './HighlightToolbar';
+import { useProxyContent } from '@/hooks/useProxyContent';
+import { useAIChat } from '@/hooks/useAIChat';
 
 interface ReadingViewProps {
   reading: Reading;
@@ -19,20 +21,39 @@ interface ReadingViewProps {
 export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onCreateHighlight, highlights }: ReadingViewProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [currentNote, setCurrentNote] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: `Hi! I'm here to help you understand "${reading.title}". Feel free to ask me any questions about the content, request summaries, or ask me to explain concepts in simpler terms.`,
-      timestamp: new Date()
-    }
-  ]);
   const [inputMessage, setInputMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [showFlashcardModal, setShowFlashcardModal] = useState(false);
   const [flashcardFront, setFlashcardFront] = useState('');
   const [flashcardBack, setFlashcardBack] = useState('');
+  const contentRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Proxy content from external URL
+  const { html: proxiedContent, isLoading: isLoadingContent, error: contentError } = useProxyContent(reading.url);
+
+  // AI Chat hook
+  const { messages, isLoading: isTyping, sendMessage, setMessages } = useAIChat({
+    readingTitle: reading.title,
+    readingContent: proxiedContent ? extractTextContent(proxiedContent) : undefined
+  });
+
+  // Initialize welcome message
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([{
+        id: '1',
+        role: 'assistant',
+        content: `Hi! I'm here to help you understand "${reading.title}". Feel free to ask me any questions about the content, request summaries, or ask me to explain concepts in simpler terms.`,
+        timestamp: new Date()
+      }]);
+    }
+  }, [reading.title, messages.length, setMessages]);
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleTextSelection = () => {
     const selection = window.getSelection();
@@ -70,30 +91,10 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: inputMessage,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    if (!inputMessage.trim() || isTyping) return;
+    const message = inputMessage;
     setInputMessage('');
-    setIsTyping(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: generateMockResponse(inputMessage, reading.title),
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 1500);
+    await sendMessage(message);
   };
 
   const handleAddNote = () => {
@@ -188,16 +189,43 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
             <span className="text-xs text-muted-foreground ml-auto">Select text to highlight or create flashcard</span>
           </div>
           <ScrollArea className="flex-1">
-            <div className="p-6" onMouseUp={handleTextSelection}>
-              {/* Embedded content or iframe */}
-              <div className="w-full h-full min-h-[500px]">
-                <iframe
-                  src={reading.url}
-                  className="w-full h-full min-h-[500px] rounded-lg border border-border"
-                  title={reading.title}
-                  sandbox="allow-same-origin allow-scripts allow-popups"
+            <div 
+              ref={contentRef}
+              className="p-6" 
+              onMouseUp={handleTextSelection}
+            >
+              {isLoadingContent ? (
+                <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                  <p>Loading content...</p>
+                </div>
+              ) : contentError ? (
+                <div className="flex flex-col items-center justify-center h-[400px]">
+                  <p className="text-destructive mb-4">Failed to load content</p>
+                  <a 
+                    href={reading.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Open in new tab →
+                  </a>
+                </div>
+              ) : proxiedContent ? (
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: proxiedContent }}
                 />
-              </div>
+              ) : (
+                <div className="w-full h-full min-h-[500px]">
+                  <iframe
+                    src={reading.url}
+                    className="w-full h-full min-h-[500px] rounded-lg border border-border"
+                    title={reading.title}
+                    sandbox="allow-same-origin allow-scripts allow-popups"
+                  />
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -247,7 +275,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                       </div>
                     </div>
                   ))}
-                  {isTyping && (
+                  {isTyping && messages[messages.length - 1]?.content === '' && (
                     <div className="flex justify-start">
                       <div className="bg-secondary rounded-lg px-4 py-3">
                         <div className="flex items-center gap-1">
@@ -258,6 +286,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                       </div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
               
@@ -274,9 +303,10 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                         handleSendMessage();
                       }
                     }}
+                    disabled={isTyping}
                   />
-                  <Button onClick={handleSendMessage} className="self-end">
-                    <Send className="h-4 w-4" />
+                  <Button onClick={handleSendMessage} className="self-end" disabled={isTyping}>
+                    {isTyping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -369,12 +399,9 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   );
 }
 
-function generateMockResponse(question: string, readingTitle: string): string {
-  const responses = [
-    `Great question about "${readingTitle}"! The key concept here is that modern AI tools are transforming how we approach software development. Instead of writing code from scratch, we're moving towards a cycle of planning, generating with AI, modifying, and iterating.`,
-    `That's an interesting point to explore. In the context of this reading, the main takeaway is that AI-assisted development isn't about replacing developers, but about augmenting their capabilities. This allows engineers to focus on higher-level design and problem-solving.`,
-    `Let me break that down for you. The reading discusses how LLMs can understand context, generate code, and even debug issues. The key is learning how to effectively communicate with these tools through good prompting techniques.`,
-    `Based on the reading, this relates to the concept of "prompt engineering" - the art of crafting inputs that help AI models produce better outputs. It's becoming a crucial skill for modern developers.`,
-  ];
-  return responses[Math.floor(Math.random() * responses.length)];
+// Helper to extract plain text from HTML for AI context
+function extractTextContent(html: string): string {
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  return tempDiv.textContent || tempDiv.innerText || '';
 }
