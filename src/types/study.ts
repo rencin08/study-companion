@@ -48,9 +48,32 @@ export interface Note {
   createdAt: Date;
 }
 
+export interface Highlight {
+  id: string;
+  text: string;
+  color: 'yellow' | 'green' | 'blue' | 'pink';
+  weekId: string;
+  readingId: string;
+  createdAt: Date;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+}
+
+export interface SelfLectureSession {
+  id: string;
+  weekId: string;
+  readingId?: string;
+  userTranscript: string;
+  aiAnalysis: {
+    retained: string[];
+    forgotten: string[];
+    suggestions: string[];
+    score: number;
+  } | null;
+  createdAt: Date;
 }

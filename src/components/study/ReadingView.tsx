@@ -1,19 +1,22 @@
-import { useState, useRef } from 'react';
-import { Reading, ChatMessage, Flashcard, Note } from '@/types/study';
+import { useState } from 'react';
+import { Reading, ChatMessage, Flashcard, Note, Highlight } from '@/types/study';
 import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { HighlightToolbar } from './HighlightToolbar';
 
 interface ReadingViewProps {
   reading: Reading;
   weekTitle: string;
   onBack: () => void;
   onCreateFlashcard: (flashcard: Omit<Flashcard, 'id' | 'createdAt'>) => void;
+  onCreateHighlight: (highlight: Omit<Highlight, 'id' | 'createdAt'>) => void;
+  highlights: Highlight[];
 }
 
-export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard }: ReadingViewProps) {
+export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onCreateHighlight, highlights }: ReadingViewProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [currentNote, setCurrentNote] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -35,6 +38,18 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard }: R
     const selection = window.getSelection();
     if (selection && selection.toString().trim()) {
       setSelectedText(selection.toString().trim());
+    }
+  };
+
+  const handleCreateHighlight = (color: Highlight['color']) => {
+    if (selectedText) {
+      onCreateHighlight({
+        text: selectedText,
+        color,
+        weekId: reading.id.split('-')[0] + '-' + reading.id.split('-')[1],
+        readingId: reading.id,
+      });
+      setSelectedText('');
     }
   };
 
@@ -97,6 +112,16 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard }: R
     }
   };
 
+  const getHighlightColorClass = (color: Highlight['color']) => {
+    switch (color) {
+      case 'yellow': return 'bg-yellow-200';
+      case 'green': return 'bg-green-200';
+      case 'blue': return 'bg-blue-200';
+      case 'pink': return 'bg-pink-200';
+      default: return 'bg-yellow-200';
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-120px)] flex flex-col">
       {/* Header */}
@@ -112,31 +137,46 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard }: R
           </div>
         </div>
         
-        {selectedText && (
-          <div className="flex items-center gap-2 bg-accent/20 px-3 py-2 rounded-lg">
-            <span className="text-sm text-muted-foreground max-w-[200px] truncate">"{selectedText}"</span>
+        <div className="flex items-center gap-3">
+          {selectedText && (
+            <HighlightToolbar
+              selectedText={selectedText}
+              onHighlight={handleCreateHighlight}
+              onClear={() => setSelectedText('')}
+            />
+          )}
+          
+          {selectedText && (
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               onClick={() => {
                 setFlashcardFront(selectedText);
                 setShowFlashcardModal(true);
               }}
-              className="text-primary"
+              className="gap-2"
             >
-              <Brain className="h-4 w-4 mr-1" />
+              <Brain className="h-4 w-4" />
               Create Flashcard
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSelectedText('')}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Highlights List */}
+      {highlights.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <span className="text-xs text-muted-foreground">Highlights:</span>
+          {highlights.map((h) => (
+            <span
+              key={h.id}
+              className={`text-xs px-2 py-1 rounded ${getHighlightColorClass(h.color)}`}
+            >
+              "{h.text.substring(0, 30)}{h.text.length > 30 ? '...' : ''}"
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Dual panel layout */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
@@ -145,6 +185,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard }: R
           <div className="flex items-center gap-2 p-3 border-b border-border bg-muted/30">
             <Highlighter className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Reading Content</span>
+            <span className="text-xs text-muted-foreground ml-auto">Select text to highlight or create flashcard</span>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-6" onMouseUp={handleTextSelection}>
