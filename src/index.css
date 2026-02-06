@@ -411,7 +411,7 @@
     display: none;
   }
 
-  /* Remove scripts, styles, and other non-content elements */
+  /* Remove scripts, styles, ads, and other non-content elements */
   .article-content script,
   .article-content style,
   .article-content nav,
@@ -419,9 +419,53 @@
   .article-content footer,
   .article-content aside,
   .article-content button,
+  .article-content form,
+  .article-content input,
   .article-content [role="navigation"],
+  .article-content [role="banner"],
+  .article-content [role="complementary"],
   .article-content [aria-hidden="true"],
+  .article-content [class*="ad-"],
+  .article-content [class*="ads-"],
+  .article-content [class*="advertisement"],
+  .article-content [class*="promo"],
+  .article-content [class*="sponsor"],
+  .article-content [class*="banner"],
+  .article-content [class*="newsletter"],
+  .article-content [class*="subscribe"],
+  .article-content [class*="signup"],
+  .article-content [class*="cta"],
+  .article-content [id*="ad-"],
+  .article-content [id*="ads-"],
+  .article-content [id*="advertisement"],
   .article-content iframe:not([src*="youtube"]):not([src*="vimeo"]) {
+    display: none !important;
+  }
+
+  /* Hide large decorative SVGs (likely logos, icons, ads) */
+  .article-content svg {
+    display: none !important;
+  }
+
+  /* But keep small inline SVGs for icons */
+  .article-content svg[width="16"],
+  .article-content svg[width="20"],
+  .article-content svg[width="24"],
+  .article-content svg[height="16"],
+  .article-content svg[height="20"],
+  .article-content svg[height="24"] {
+    display: inline-block !important;
+    width: auto;
+    height: 1em;
+  }
+
+  /* Hide oversized images that are likely ads or decorations */
+  .article-content img[src*="logo"],
+  .article-content img[src*="banner"],
+  .article-content img[src*="ad"],
+  .article-content img[alt*="logo"],
+  .article-content img[alt*="banner"],
+  .article-content img[alt*="advertisement"] {
     display: none !important;
   }
 
