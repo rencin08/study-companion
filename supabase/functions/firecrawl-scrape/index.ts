@@ -46,7 +46,7 @@ serve(async (req) => {
       body: JSON.stringify({
         url: formattedUrl,
         formats: ['markdown'],
-        onlyMainContent: false, // Get full page content for documentation sites
+        onlyMainContent: true, // Focus on main content, exclude navigation
         waitFor: 5000, // Wait 5s for JS content to fully render
       }),
     });
