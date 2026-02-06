@@ -28,11 +28,13 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   const [showFlashcardModal, setShowFlashcardModal] = useState(false);
   const [flashcardFront, setFlashcardFront] = useState('');
   const [flashcardBack, setFlashcardBack] = useState('');
+  const [currentUrl, setCurrentUrl] = useState(reading.url);
+  const [urlHistory, setUrlHistory] = useState<string[]>([reading.url]);
   const contentRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Use Firecrawl for content scraping
-  const { markdown, metadata, isLoading: isLoadingContent, error: contentError } = useFirecrawlScrape(reading.url);
+  // Use Firecrawl for content scraping - tracks currentUrl
+  const { markdown, metadata, isLoading: isLoadingContent, error: contentError } = useFirecrawlScrape(currentUrl);
 
   // AI Chat hook with scraped content context
   const { messages, isLoading: isTyping, sendMessage, setMessages } = useAIChat({
@@ -125,18 +127,48 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
     }
   };
 
+  const handleInternalLink = (href: string) => {
+    // Resolve relative URLs to the source domain
+    let resolvedUrl = href;
+    if (!href.startsWith('http')) {
+      try {
+        const baseUrl = new URL(currentUrl);
+        resolvedUrl = new URL(href, baseUrl.origin).href;
+      } catch {
+        resolvedUrl = href;
+      }
+    }
+    setUrlHistory(prev => [...prev, resolvedUrl]);
+    setCurrentUrl(resolvedUrl);
+  };
+
+  const handleBackNavigation = () => {
+    if (urlHistory.length > 1) {
+      const newHistory = urlHistory.slice(0, -1);
+      setUrlHistory(newHistory);
+      setCurrentUrl(newHistory[newHistory.length - 1]);
+    } else {
+      onBack();
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-120px)] flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={onBack} className="-ml-2">
+          <Button variant="ghost" onClick={handleBackNavigation} className="-ml-2">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {urlHistory.length > 1 ? 'Back' : 'Back'}
           </Button>
           <div>
             <p className="text-sm text-muted-foreground">{weekTitle}</p>
-            <h2 className="font-serif text-xl font-semibold">{reading.title}</h2>
+            <h2 className="font-serif text-xl font-semibold">{metadata?.title || reading.title}</h2>
+            {urlHistory.length > 1 && (
+              <p className="text-xs text-muted-foreground">
+                Viewing linked page • {urlHistory.length - 1} page(s) deep
+              </p>
+            )}
           </div>
         </div>
         
@@ -165,7 +197,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
           )}
 
           <a
-            href={reading.url}
+            href={currentUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -238,27 +270,27 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                   <ReactMarkdown 
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      a: ({ href, children, ...props }) => {
-                        // Resolve relative URLs to the source domain
-                        let resolvedHref = href || '#';
-                        if (href && !href.startsWith('http') && !href.startsWith('#')) {
-                          try {
-                            const baseUrl = new URL(reading.url);
-                            resolvedHref = new URL(href, baseUrl.origin).href;
-                          } catch {
-                            resolvedHref = href;
-                          }
+                      a: ({ href, children }) => {
+                        const isAnchorLink = href?.startsWith('#');
+                        
+                        if (isAnchorLink) {
+                          return (
+                            <a href={href} className="text-primary underline hover:text-primary/80">
+                              {children}
+                            </a>
+                          );
                         }
+                        
                         return (
-                          <a 
-                            href={resolvedHref} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-primary underline hover:text-primary/80"
-                            {...props}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (href) handleInternalLink(href);
+                            }}
+                            className="text-primary underline hover:text-primary/80 cursor-pointer bg-transparent border-none p-0 font-inherit text-left"
                           >
                             {children}
-                          </a>
+                          </button>
                         );
                       }
                     }}
