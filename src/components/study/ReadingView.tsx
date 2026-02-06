@@ -234,8 +234,35 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                   </p>
                 </div>
               ) : (
-                <div className="prose prose-sm max-w-none dark:prose-invert selection:bg-yellow-200 selection:text-black">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <div className="prose prose-sm max-w-none dark:prose-invert selection:bg-yellow-200 selection:text-black">
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ href, children, ...props }) => {
+                        // Resolve relative URLs to the source domain
+                        let resolvedHref = href || '#';
+                        if (href && !href.startsWith('http') && !href.startsWith('#')) {
+                          try {
+                            const baseUrl = new URL(reading.url);
+                            resolvedHref = new URL(href, baseUrl.origin).href;
+                          } catch {
+                            resolvedHref = href;
+                          }
+                        }
+                        return (
+                          <a 
+                            href={resolvedHref} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary underline hover:text-primary/80"
+                            {...props}
+                          >
+                            {children}
+                          </a>
+                        );
+                      }
+                    }}
+                  >
                     {markdown}
                   </ReactMarkdown>
                 </div>
