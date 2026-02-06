@@ -61,13 +61,45 @@ serve(async (req) => {
       );
     }
 
-    console.log('Scrape successful, content length:', data.data?.markdown?.length || 0);
+    let markdown = data.data?.markdown || data.markdown || '';
+    
+    // Clean up the markdown content - remove ads, promotions, navigation
+    const cleanupPatterns = [
+      // Remove promotional banners
+      /🚀[^\n]*(?:Enroll|enroll)[^\n]*→?\n*/gi,
+      /Use \*?\*?[A-Z0-9]+\*?\*? for \d+% off[^\n]*\n*/gi,
+      // Remove "Copy page" artifacts
+      /Copy page\n*/gi,
+      // Remove "Sponsored by" sections
+      /Sponsored by[^\n]*\n*/gi,
+      // Remove course recommendation blocks
+      /Related Learning[\s\S]*?(?=\n\n[A-Z]|\n\n#|$)/gi,
+      /Course\\[\s\S]*?Browse Academy\n*/gi,
+      /Explore All Courses[\s\S]*?Browse Academy\n*/gi,
+      // Remove navigation breadcrumbs at start
+      /^\[Prompt Engineering Guide\][^\n]*\n*/i,
+      // Remove last updated and navigation
+      /Last updated on[^\n]*\n*/gi,
+      // Remove CTRL K artifacts
+      /`CTRL K`\n*/g,
+      // Remove multiple consecutive newlines
+      /\n{4,}/g,
+    ];
+    
+    for (const pattern of cleanupPatterns) {
+      markdown = markdown.replace(pattern, '\n\n');
+    }
+    
+    // Trim and clean up extra whitespace
+    markdown = markdown.trim().replace(/\n{3,}/g, '\n\n');
+
+    console.log('Scrape successful, cleaned content length:', markdown.length);
     
     // Return both markdown and metadata
     return new Response(
       JSON.stringify({
         success: true,
-        markdown: data.data?.markdown || data.markdown,
+        markdown,
         html: data.data?.html || data.html,
         metadata: data.data?.metadata || data.metadata,
       }),
