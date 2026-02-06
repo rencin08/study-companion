@@ -296,4 +296,104 @@
   .highlight-text:hover {
     background-size: 100% 100%;
   }
+
+  /* Article content - renders original HTML styling */
+  .article-content {
+    @apply text-foreground leading-relaxed;
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .article-content h1 {
+    @apply text-3xl font-bold mt-8 mb-4 font-serif;
+  }
+
+  .article-content h2 {
+    @apply text-2xl font-semibold mt-6 mb-3 font-serif;
+  }
+
+  .article-content h3 {
+    @apply text-xl font-medium mt-5 mb-2 font-serif;
+  }
+
+  .article-content h4, .article-content h5, .article-content h6 {
+    @apply text-lg font-medium mt-4 mb-2;
+  }
+
+  .article-content p {
+    @apply mb-4;
+  }
+
+  .article-content ul, .article-content ol {
+    @apply mb-4 pl-6 list-outside;
+  }
+
+  .article-content ul {
+    @apply list-disc;
+  }
+
+  .article-content ol {
+    @apply list-decimal;
+  }
+
+  .article-content li {
+    @apply mb-2;
+  }
+
+  .article-content a {
+    @apply text-primary underline underline-offset-2 hover:text-primary/80 transition-colors;
+  }
+
+  .article-content img {
+    @apply max-w-full h-auto rounded-lg my-4;
+  }
+
+  .article-content pre, .article-content code {
+    @apply bg-muted rounded px-1.5 py-0.5 text-sm font-mono;
+  }
+
+  .article-content pre {
+    @apply p-4 overflow-x-auto my-4;
+  }
+
+  .article-content pre code {
+    @apply bg-transparent p-0;
+  }
+
+  .article-content blockquote {
+    @apply border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground;
+  }
+
+  .article-content table {
+    @apply w-full border-collapse my-4;
+  }
+
+  .article-content th, .article-content td {
+    @apply border border-border px-3 py-2 text-left;
+  }
+
+  .article-content th {
+    @apply bg-muted font-medium;
+  }
+
+  .article-content hr {
+    @apply my-8 border-border;
+  }
+
+  /* Remove scripts, styles, and other non-content elements */
+  .article-content script,
+  .article-content style,
+  .article-content nav,
+  .article-content header,
+  .article-content footer,
+  .article-content aside,
+  .article-content iframe:not([src*="youtube"]):not([src*="vimeo"]) {
+    display: none !important;
+  }
+
+  /* Responsive videos */
+  .article-content iframe[src*="youtube"],
+  .article-content iframe[src*="vimeo"] {
+    @apply w-full aspect-video rounded-lg my-4;
+  }
 }
