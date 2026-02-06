@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Reading, ChatMessage, Flashcard, Note, Highlight } from '@/types/study';
-import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2, ExternalLink, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,7 +11,20 @@ import { useAIChat } from '@/hooks/useAIChat';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 
+// Helper to detect and extract YouTube video ID
+const getYouTubeVideoId = (url: string): string | null => {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /youtube\.com\/v\/([^&\n?#]+)/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
 interface ReadingViewProps {
   reading: Reading;
   weekTitle: string;
@@ -34,8 +47,13 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   const contentRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Use Firecrawl for content scraping - tracks currentUrl
-  const { markdown, metadata, isLoading: isLoadingContent, error: contentError } = useFirecrawlScrape(currentUrl);
+  // Detect if current URL is a YouTube video
+  const youtubeVideoId = useMemo(() => getYouTubeVideoId(currentUrl), [currentUrl]);
+
+  // Use Firecrawl for content scraping - only if not a YouTube video
+  const { markdown, metadata, isLoading: isLoadingContent, error: contentError } = useFirecrawlScrape(
+    youtubeVideoId ? '' : currentUrl // Skip scraping for YouTube URLs
+  );
 
   // AI Chat hook with scraped content context
   const { messages, isLoading: isTyping, sendMessage, setMessages } = useAIChat({
@@ -260,7 +278,31 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
               className="p-6" 
               onMouseUp={handleTextSelection}
             >
-              {isLoadingContent ? (
+              {youtubeVideoId ? (
+                <div className="space-y-4">
+                  <AspectRatio ratio={16 / 9} className="bg-muted rounded-lg overflow-hidden">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${youtubeVideoId}`}
+                      title={reading.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full"
+                    />
+                  </AspectRatio>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Play className="h-4 w-4" />
+                    <span>YouTube Video</span>
+                    <a 
+                      href={currentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-auto text-primary hover:underline"
+                    >
+                      Open on YouTube →
+                    </a>
+                  </div>
+                </div>
+              ) : isLoadingContent ? (
                 <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
                   <Loader2 className="h-8 w-8 animate-spin mb-4" />
                   <p>Extracting content...</p>
@@ -288,7 +330,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                   </p>
                 </div>
               ) : (
-              <div className="prose prose-sm max-w-none dark:prose-invert selection:bg-yellow-200 selection:text-black">
+              <div className="prose prose-sm max-w-none dark:prose-invert selection:bg-accent selection:text-accent-foreground">
                   <ReactMarkdown 
                     remarkPlugins={[remarkGfm]}
                     rehypePlugins={[rehypeRaw]}
