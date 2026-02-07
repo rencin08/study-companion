@@ -556,8 +556,8 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
         {/* Right panel - Notes & Chat */}
         <ResizablePanel defaultSize={45} minSize={25}>
           <div className="flex flex-col h-full bg-card rounded-r-lg border-y border-r border-border shadow-card overflow-hidden">
-            <Tabs defaultValue="chat" className="flex-1 flex flex-col">
-              <TabsList className="w-full justify-start rounded-none border-b border-border bg-muted/30 p-0 h-auto">
+            <Tabs defaultValue="chat" className="flex-1 flex flex-col overflow-hidden">
+              <TabsList className="w-full justify-start rounded-none border-b border-border bg-muted/30 p-0 h-auto shrink-0">
                 <TabsTrigger 
                   value="chat" 
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 px-4"
@@ -636,11 +636,13 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                 </div>
               </TabsContent>
 
-              <TabsContent value="notes" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col h-full overflow-hidden">
-                <NotesEditor
-                  readingId={reading.id}
-                  weekId={reading.id.split('-')[0] + '-' + reading.id.split('-')[1]}
-                />
+              <TabsContent value="notes" className="flex-1 m-0 p-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden">
+                <div className="flex flex-col h-full w-full">
+                  <NotesEditor
+                    readingId={reading.id}
+                    weekId={reading.id.split('-')[0] + '-' + reading.id.split('-')[1]}
+                  />
+                </div>
               </TabsContent>
             </Tabs>
           </div>
