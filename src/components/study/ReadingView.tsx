@@ -187,45 +187,74 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   const highlightedHtml = useMemo(() => applyHighlightsToContent(html), [html, currentHighlights]);
 
   // Extract topic links from markdown for grid display
-  const { processedMarkdown, topicLinks } = useMemo(() => {
-    if (!highlightedMarkdown) return { processedMarkdown: '', topicLinks: [] };
-    
+  const { processedMarkdown, processedHtml, topicLinks } = useMemo(() => {
     const topicPattern = /prompting|reasoning|generation|learning|thought|chain|shot|knowledge|engineer|retrieval|react|reflexion|multimodal|graph/i;
-    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
     const links: Array<{ text: string; href: string }> = [];
     
-    // Find all topic links
-    let match;
-    while ((match = linkRegex.exec(highlightedMarkdown)) !== null) {
-      const [, text, href] = match;
-      if (
-        text && href &&
-        !href.startsWith('#') &&
-        !href.includes('twitter') &&
-        !href.includes('github') &&
-        !href.includes('linkedin') &&
-        text.length > 5 &&
-        text.length < 80 &&
-        topicPattern.test(text)
-      ) {
-        links.push({ text: text.trim(), href });
+    // Extract links from markdown
+    if (highlightedMarkdown) {
+      const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+      let match;
+      while ((match = linkRegex.exec(highlightedMarkdown)) !== null) {
+        const [, text, href] = match;
+        if (
+          text && href &&
+          !href.startsWith('#') &&
+          !href.includes('twitter') &&
+          !href.includes('github') &&
+          !href.includes('linkedin') &&
+          text.length > 5 &&
+          text.length < 80 &&
+          topicPattern.test(text)
+        ) {
+          links.push({ text: text.trim(), href });
+        }
       }
     }
     
-    // Remove topic links from markdown (they'll be rendered in the grid)
-    let processed = highlightedMarkdown;
+    // Also extract links from HTML if markdown didn't have them
+    if (links.length === 0 && highlightedHtml) {
+      const htmlLinkRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi;
+      let match;
+      while ((match = htmlLinkRegex.exec(highlightedHtml)) !== null) {
+        const [, href, text] = match;
+        if (
+          text && href &&
+          !href.startsWith('#') &&
+          !href.includes('twitter') &&
+          !href.includes('github') &&
+          !href.includes('linkedin') &&
+          text.length > 5 &&
+          text.length < 80 &&
+          topicPattern.test(text)
+        ) {
+          links.push({ text: text.trim(), href });
+        }
+      }
+    }
+    
+    // Remove topic links from markdown
+    let processedMd = highlightedMarkdown || '';
     for (const link of links) {
       const escapedText = link.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const escapedHref = link.href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const pattern = new RegExp(`\\[${escapedText}\\]\\(${escapedHref}\\)`, 'g');
-      processed = processed.replace(pattern, '');
+      processedMd = processedMd.replace(pattern, '');
+    }
+    processedMd = processedMd.replace(/\n{3,}/g, '\n\n').trim();
+    
+    // Remove topic links from HTML
+    let processedH = highlightedHtml || '';
+    for (const link of links) {
+      const escapedText = link.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedHref = link.href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Match anchor tags with this href and text
+      const pattern = new RegExp(`<a[^>]*href=["']${escapedHref}["'][^>]*>${escapedText}<\\/a>`, 'gi');
+      processedH = processedH.replace(pattern, '');
     }
     
-    // Clean up extra whitespace left behind
-    processed = processed.replace(/\n{3,}/g, '\n\n').trim();
-    
-    return { processedMarkdown: processed, topicLinks: links };
-  }, [highlightedMarkdown]);
+    return { processedMarkdown: processedMd, processedHtml: processedH, topicLinks: links };
+  }, [highlightedMarkdown, highlightedHtml]);
 
   const handleInternalLink = (href: string) => {
     // Resolve relative URLs to the source domain
@@ -430,11 +459,27 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                     </p>
                   </div>
                 ) : viewMode === 'html' && highlightedHtml ? (
-                  // Render HTML with original article styling
-                  <div 
-                    className="article-content selection:bg-accent selection:text-accent-foreground"
-                    dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-                  />
+                  // Render HTML with original article styling + topic cards
+                  <div className="selection:bg-accent selection:text-accent-foreground">
+                    {/* Render topic links as a card grid for HTML view too */}
+                    {topicLinks.length > 0 && (
+                      <TopicLinksGrid>
+                        {topicLinks.map((link, index) => (
+                          <ExpandableTopicLink
+                            key={index}
+                            text={link.text}
+                            href={link.href}
+                            baseUrl={currentUrl}
+                          />
+                        ))}
+                      </TopicLinksGrid>
+                    )}
+                    
+                    <div 
+                      className="article-content"
+                      dangerouslySetInnerHTML={{ __html: processedHtml }}
+                    />
+                  </div>
                 ) : (
                   // Fallback to markdown rendering with expandable topic links
                   <div className="selection:bg-accent selection:text-accent-foreground">
