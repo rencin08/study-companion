@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-
-const FIRECRAWL_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/firecrawl-scrape`;
+import { supabase } from '@/integrations/supabase/client';
 
 interface ScrapeResult {
   markdown: string | null;
@@ -34,24 +33,16 @@ export function useFirecrawlScrape(url: string): ScrapeResult {
       setHtml(null);
 
       try {
-        const response = await fetch(FIRECRAWL_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ url }),
+        const { data, error: fnError } = await supabase.functions.invoke('firecrawl-scrape', {
+          body: { url },
         });
 
-        const contentType = response.headers.get('content-type');
-        if (!contentType?.includes('application/json')) {
-          throw new Error('Invalid response format');
+        if (fnError) {
+          throw new Error(fnError.message || 'Failed to scrape content');
         }
 
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || `Failed to scrape: ${response.status}`);
+        if (!data?.success) {
+          throw new Error(data?.error || 'Failed to scrape content');
         }
 
         setMarkdown(data.markdown);
