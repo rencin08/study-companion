@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Save, Trash2, PenTool } from 'lucide-react';
 import { toast } from 'sonner';
+import '@excalidraw/excalidraw/index.css';
 
 interface WhiteboardProps {
   weekId?: string;
