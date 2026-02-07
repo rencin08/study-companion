@@ -82,8 +82,10 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   }, [messages]);
   const handleTextSelection = () => {
     const selection = window.getSelection();
-    if (selection && selection.toString().trim()) {
-      setSelectedText(selection.toString().trim());
+    const selectedString = selection?.toString().trim();
+    if (selectedString && selectedString.length > 0) {
+      console.log('Text selected:', selectedString.substring(0, 50));
+      setSelectedText(selectedString);
     }
   };
 
@@ -473,7 +475,10 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                   </div>
                 ) : viewMode === 'html' && highlightedHtml ? (
                   // Render HTML with original article styling + topic cards
-                  <div className="selection:bg-accent selection:text-accent-foreground">
+                  <div 
+                    className="selection:bg-accent selection:text-accent-foreground"
+                    onMouseUp={handleTextSelection}
+                  >
                     {/* Render topic links as a card grid for HTML view too */}
                     {topicLinks.length > 0 && (
                       <TopicLinksGrid>
@@ -491,6 +496,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                     
                     <div 
                       className="article-content"
+                      onMouseUp={handleTextSelection}
                       dangerouslySetInnerHTML={{ __html: processedHtml }}
                     />
                   </div>
