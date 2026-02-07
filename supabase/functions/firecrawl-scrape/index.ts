@@ -64,20 +64,33 @@ serve(async (req) => {
     let markdown = data.data?.markdown || data.markdown || '';
     let htmlContent = data.data?.html || data.html || data.data?.rawHtml || data.rawHtml || null;
     
+    // Extract internal links for expandable sections (before cleanup)
+    const internalLinks: Array<{text: string; url: string}> = [];
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let match;
+    while ((match = linkRegex.exec(markdown)) !== null) {
+      const [, text, url] = match;
+      // Only include links that look like topic/technique links (not navigation)
+      if (url && !url.startsWith('#') && !url.includes('twitter') && !url.includes('github') && 
+          !url.includes('linkedin') && text.length > 3 && text.length < 100) {
+        internalLinks.push({ text: text.trim(), url });
+      }
+    }
+    
     // Clean up the markdown content - remove ads, promotions, navigation
     const cleanupPatterns = [
-      // Remove promotional banners with emojis and enrollment CTAs
-      /🚀[^\n]*(?:Enroll|enroll)[^\n]*→?\n*/gi,
-      /🎯[^\n]*(?:Enroll|enroll|course|discount)[^\n]*\n*/gi,
-      /Use \*?\*?[A-Z0-9]+\*?\*? for \d+% off[^\n]*\n*/gi,
-      /Master building[^\n]*Enroll now[^\n]*→?\n*/gi,
-      // Remove discount codes and enrollment CTAs
-      /Use [A-Z0-9]+ for \d+% off[^\n]*\n*/gi,
-      /Enroll now →?\n*/gi,
+      // Remove promotional banners - very aggressive patterns
+      /.*🚀.*(?:Enroll|enroll|Master|Course|discount).*→?\n*/gi,
+      /.*🎯.*(?:Enroll|enroll|course|discount).*\n*/gi,
+      /.*Master building.*(?:Enroll|enroll).*→?\n*/gi,
+      /.*Use [A-Z0-9]+ for \d+% off.*\n*/gi,
+      // Remove any line with enrollment CTA
+      /.*Enroll now.*→?\n*/gi,
+      /.*[A-Z0-9]{6,} for \d+% off.*\n*/gi,
       // Remove "Copy page" artifacts
       /Copy page\n*/gi,
       // Remove "Sponsored by" sections
-      /Sponsored by[^\n]*\n*/gi,
+      /.*Sponsored by.*\n*/gi,
       // Remove course recommendation blocks
       /Related Learning[\s\S]*?(?=\n\n[A-Z]|\n\n#|$)/gi,
       /Course\\[\s\S]*?Browse Academy\n*/gi,
@@ -85,15 +98,17 @@ serve(async (req) => {
       // Remove navigation breadcrumbs at start
       /^\[Prompt Engineering Guide\][^\n]*\n*/i,
       // Remove last updated timestamps
-      /Last updated on[^\n]*\n*/gi,
-      /Last updated[^\n]*\n*/gi,
-      /Updated on[^\n]*\n*/gi,
+      /.*Last updated on.*\n*/gi,
+      /.*Last updated.*\n*/gi,
+      /.*Updated on.*\n*/gi,
       // Remove CTRL K artifacts
       /`CTRL K`\n*/g,
       // Remove video embeds and iframes (keep text description)
       /\[.*?\]\(https?:\/\/(?:www\.)?(?:youtube|vimeo|dailymotion)[^\)]+\)/gi,
       /<iframe[^>]*>[\s\S]*?<\/iframe>/gi,
       /<video[^>]*>[\s\S]*?<\/video>/gi,
+      // Remove Examples of Prompts navigation links at bottom
+      /Examples of Prompts[^\n]*\n*/gi,
       // Remove multiple consecutive newlines
       /\n{4,}/g,
     ];
@@ -102,27 +117,24 @@ serve(async (req) => {
       markdown = markdown.replace(pattern, '\n\n');
     }
     
-    // Ensure proper paragraph spacing - add double newlines after sentences that end paragraphs
+    // Ensure proper paragraph spacing
     markdown = markdown
-      // Trim and clean up extra whitespace
       .trim()
       .replace(/\n{3,}/g, '\n\n')
-      // Ensure paragraphs have proper spacing
       .replace(/([.!?])\n([A-Z])/g, '$1\n\n$2')
-      // Fix lists that got squished
       .replace(/([^\n])\n([-*•])/g, '$1\n\n$2')
-      // Ensure headers have spacing
       .replace(/([^\n])\n(#{1,6}\s)/g, '$1\n\n$2');
     
     // Clean HTML content similarly
     if (htmlContent) {
       const htmlCleanupPatterns = [
-        // Remove promotional banners
+        // Remove promotional banners and CTAs
         /<[^>]*class="[^"]*(?:promo|banner|ad-|ads-|advertisement|sponsor|newsletter|subscribe|cta|enrollment)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
         // Remove elements with promotional text
         /🚀[^<]*(?:Enroll|enroll)[^<]*→?/gi,
         /Master building[^<]*Enroll now[^<]*→?/gi,
         /Use [A-Z0-9]+ for \d+% off[^<]*/gi,
+        /Enroll now[^<]*→?/gi,
         // Remove last updated text
         /Last updated on[^<]*/gi,
         /Last updated[^<]*/gi,
@@ -131,6 +143,8 @@ serve(async (req) => {
         /<video[^>]*>[\s\S]*?<\/video>/gi,
         // Remove sponsored sections
         /Sponsored by[^<]*/gi,
+        // Remove navigation footer links
+        /Examples of Prompts[^<]*/gi,
       ];
       
       for (const pattern of htmlCleanupPatterns) {
