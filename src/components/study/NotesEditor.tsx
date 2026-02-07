@@ -290,19 +290,14 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
           "prose-li:my-0.5",
           "prose-blockquote:border-l-primary prose-blockquote:bg-muted/50 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r",
           "prose-pre:bg-muted prose-pre:rounded-lg prose-pre:p-4",
-          "prose-a:text-primary prose-a:no-underline hover:prose-a:underline"
+          "prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
+          "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground empty:before:pointer-events-none"
         )}
         data-placeholder="Start taking notes..."
         style={{
           minHeight: 0
         }}
-      >
-        {isEmpty && (
-          <span className="text-muted-foreground pointer-events-none">
-            Start taking notes...
-          </span>
-        )}
-      </div>
+      />
 
       {/* Status bar at bottom */}
       <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-muted/30 text-xs text-muted-foreground shrink-0">
