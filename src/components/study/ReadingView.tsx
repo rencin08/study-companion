@@ -14,6 +14,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import DOMPurify from 'dompurify';
 
 // Helper to detect and extract YouTube video ID
 const getYouTubeVideoId = (url: string): string | null => {
@@ -268,7 +269,14 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
       processedH = processedH.replace(pattern, '');
     }
     
-    return { processedMarkdown: processedMd, processedHtml: processedH, topicLinks: links };
+    // Sanitize HTML to prevent XSS attacks
+    const sanitizedHtml = DOMPurify.sanitize(processedH, {
+      ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'strong', 'em', 'b', 'i', 'code', 'pre', 'blockquote', 'br', 'div', 'span', 'mark', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img', 'figure', 'figcaption', 'hr', 'sup', 'sub', 'dl', 'dt', 'dd'],
+      ALLOWED_ATTR: ['href', 'class', 'style', 'src', 'alt', 'title', 'target', 'rel'],
+      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+    });
+    
+    return { processedMarkdown: processedMd, processedHtml: sanitizedHtml, topicLinks: links };
   }, [highlightedMarkdown, highlightedHtml]);
 
   const handleInternalLink = (href: string) => {
