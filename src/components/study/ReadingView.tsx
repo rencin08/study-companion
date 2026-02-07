@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, Fragment } from 'react';
 import { Reading, ChatMessage, Flashcard, Note, Highlight } from '@/types/study';
 import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2, ExternalLink, Play, FileText, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HighlightToolbar } from './HighlightToolbar';
+import { ExpandableTopicLink } from './ExpandableTopicLink';
 import { useFirecrawlScrape } from '@/hooks/useFirecrawlScrape';
 import { useAIChat } from '@/hooks/useAIChat';
 import ReactMarkdown from 'react-markdown';
@@ -394,7 +395,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                     dangerouslySetInnerHTML={{ __html: highlightedHtml }}
                   />
                 ) : (
-                  // Fallback to markdown rendering
+                  // Fallback to markdown rendering with expandable topic links
                   <div className="prose prose-sm max-w-none dark:prose-invert selection:bg-accent selection:text-accent-foreground">
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
@@ -402,12 +403,34 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                       components={{
                         a: ({ href, children }) => {
                           const isAnchorLink = href?.startsWith('#');
+                          const linkText = typeof children === 'string' ? children : 
+                            Array.isArray(children) ? children.join('') : '';
+                          
+                          // Check if this looks like a topic/technique link (not navigation)
+                          const isTopicLink = href && 
+                            !isAnchorLink && 
+                            !href.includes('twitter') && 
+                            !href.includes('github') && 
+                            !href.includes('linkedin') &&
+                            linkText.length > 5 &&
+                            linkText.length < 80 &&
+                            /prompting|reasoning|generation|learning|thought|chain|shot|knowledge|engineer|retrieval|react|reflexion|multimodal|graph/i.test(linkText);
                           
                           if (isAnchorLink) {
                             return (
                               <a href={href} className="text-primary underline hover:text-primary/80">
                                 {children}
                               </a>
+                            );
+                          }
+                          
+                          if (isTopicLink && href) {
+                            return (
+                              <ExpandableTopicLink
+                                text={linkText}
+                                href={href}
+                                baseUrl={currentUrl}
+                              />
                             );
                           }
                           
