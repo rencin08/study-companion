@@ -80,20 +80,27 @@ export function WeekCard({ week, onClick, progress = 0 }: WeekCardProps) {
           </div>
         </div>
 
-        {/* Reading icons preview */}
-        {week.readings.length > 0 && (
+        {/* Resource icons preview - show mix of readings, assignments, and lectures */}
+        {(week.readings.length > 0 || week.assignments.length > 0 || week.lectures.length > 0) && (
           <div className="flex items-center gap-2 mt-3">
-            {week.readings.slice(0, 5).map((reading, idx) => (
+            {/* Combine all resources with their types */}
+            {[
+              ...week.readings.slice(0, 2).map(r => ({ id: r.id, title: r.title, type: r.type })),
+              ...week.assignments.slice(0, 2).map(a => ({ id: a.id, title: a.title, type: 'assignment' as const })),
+              ...week.lectures.slice(0, 2).map((l, i) => ({ id: `lecture-${i}`, title: l.title, type: 'lecture' as const })),
+            ].slice(0, 5).map((resource) => (
               <div
-                key={reading.id}
+                key={resource.id}
                 className="flex items-center justify-center w-7 h-7 rounded-md bg-secondary text-secondary-foreground"
-                title={reading.title}
+                title={resource.title}
               >
-                {getReadingIcon(reading.type)}
+                {resource.type === 'lecture' ? <Presentation className="h-4 w-4" /> : getReadingIcon(resource.type)}
               </div>
             ))}
-            {week.readings.length > 5 && (
-              <span className="text-xs text-muted-foreground">+{week.readings.length - 5} more</span>
+            {(week.readings.length + week.assignments.length + week.lectures.length) > 5 && (
+              <span className="text-xs text-muted-foreground">
+                +{(week.readings.length + week.assignments.length + week.lectures.length) - 5} more
+              </span>
             )}
           </div>
         )}

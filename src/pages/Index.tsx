@@ -6,6 +6,7 @@ import { WeekDetail } from '@/components/study/WeekDetail';
 import { ReadingView } from '@/components/study/ReadingView';
 import { ReviewHub } from '@/components/study/ReviewHub';
 import { SlideViewer } from '@/components/study/SlideViewer';
+import { AddCourseDialog } from '@/components/study/AddCourseDialog';
 import { modernSoftwareCourse, sampleFlashcards } from '@/data/courseData';
 import { WeekContent, Reading, Flashcard, Highlight } from '@/types/study';
 
@@ -24,6 +25,19 @@ const Index = () => {
   const [selectedLecture, setSelectedLecture] = useState<LectureInfo | null>(null);
   const [flashcards, setFlashcards] = useState<Flashcard[]>(sampleFlashcards);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [addCourseOpen, setAddCourseOpen] = useState(false);
+  
+  // Track completed items per week (in a real app this would be persisted)
+  const [completedItems, setCompletedItems] = useState<Record<string, Set<string>>>({});
+  
+  // Calculate progress for a week based on completed items
+  const calculateWeekProgress = (week: WeekContent): number => {
+    const totalItems = week.readings.length + week.assignments.length + week.lectures.length;
+    if (totalItems === 0) return 0;
+    
+    const completed = completedItems[week.id]?.size || 0;
+    return Math.round((completed / totalItems) * 100);
+  };
 
   const handleWeekClick = (week: WeekContent) => {
     setSelectedWeek(week);
@@ -87,7 +101,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <Navbar onAddCourse={() => setAddCourseOpen(true)} />
       
       <main className="container py-8">
         {viewMode === 'dashboard' && (
@@ -104,7 +118,7 @@ const Index = () => {
                   key={week.id}
                   week={week}
                   onClick={() => handleWeekClick(week)}
-                  progress={Math.floor(Math.random() * 30)} // Demo progress
+                  progress={calculateWeekProgress(week)}
                 />
               ))}
             </div>
@@ -150,6 +164,8 @@ const Index = () => {
           />
         )}
       </main>
+      
+      <AddCourseDialog open={addCourseOpen} onOpenChange={setAddCourseOpen} />
     </div>
   );
 };
