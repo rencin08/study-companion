@@ -93,7 +93,7 @@ export function Whiteboard({ weekId }: WhiteboardProps) {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="h-[400px] w-full border-t excalidraw-container">
+        <div className="h-[500px] w-full border-t excalidraw-container">
           <Excalidraw
             excalidrawAPI={(api: any) => setExcalidrawAPI(api)}
             initialData={initialData}
@@ -105,10 +105,6 @@ export function Whiteboard({ weekId }: WhiteboardProps) {
                 export: false,
                 saveAsImage: false,
               },
-              tools: {
-                image: false,
-              },
-              dockedSidebarBreakpoint: 0,
             }}
           />
         </div>
