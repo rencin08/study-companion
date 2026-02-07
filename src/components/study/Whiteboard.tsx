@@ -61,10 +61,10 @@ export function Whiteboard({ weekId }: WhiteboardProps) {
 
   if (!Excalidraw) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center h-[500px]">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <PenTool className="h-5 w-5 animate-pulse" />
+      <Card className="overflow-hidden">
+        <CardContent className="flex items-center justify-center h-[400px]">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <PenTool className="h-4 w-4 animate-pulse" />
             Loading whiteboard...
           </div>
         </CardContent>
@@ -73,27 +73,27 @@ export function Whiteboard({ weekId }: WhiteboardProps) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden">
+      <CardHeader className="py-3 px-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-medium flex items-center gap-2">
-            <PenTool className="h-5 w-5" />
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <PenTool className="h-4 w-4" />
             Visual Notes
           </CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleClear}>
-              <Trash2 className="h-4 w-4 mr-1" />
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleClear}>
+              <Trash2 className="h-3 w-3 mr-1" />
               Clear
             </Button>
-            <Button size="sm" onClick={handleSave}>
-              <Save className="h-4 w-4 mr-1" />
+            <Button size="sm" className="h-7 text-xs" onClick={handleSave}>
+              <Save className="h-3 w-3 mr-1" />
               Save
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="h-[500px] w-full border-t">
+        <div className="h-[400px] w-full border-t excalidraw-container">
           <Excalidraw
             excalidrawAPI={(api: any) => setExcalidrawAPI(api)}
             initialData={initialData}
