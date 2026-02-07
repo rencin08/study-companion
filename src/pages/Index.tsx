@@ -5,15 +5,23 @@ import { WeekCard } from '@/components/study/WeekCard';
 import { WeekDetail } from '@/components/study/WeekDetail';
 import { ReadingView } from '@/components/study/ReadingView';
 import { ReviewHub } from '@/components/study/ReviewHub';
+import { SlideViewer } from '@/components/study/SlideViewer';
 import { modernSoftwareCourse, sampleFlashcards } from '@/data/courseData';
 import { WeekContent, Reading, Flashcard, Highlight } from '@/types/study';
 
-type ViewMode = 'dashboard' | 'week' | 'reading' | 'review';
+interface LectureInfo {
+  title: string;
+  date: string;
+  slidesUrl: string;
+}
+
+type ViewMode = 'dashboard' | 'week' | 'reading' | 'review' | 'slides';
 
 const Index = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [selectedWeek, setSelectedWeek] = useState<WeekContent | null>(null);
   const [selectedReading, setSelectedReading] = useState<Reading | null>(null);
+  const [selectedLecture, setSelectedLecture] = useState<LectureInfo | null>(null);
   const [flashcards, setFlashcards] = useState<Flashcard[]>(sampleFlashcards);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
 
@@ -31,6 +39,17 @@ const Index = () => {
     setViewMode('dashboard');
     setSelectedWeek(null);
     setSelectedReading(null);
+    setSelectedLecture(null);
+  };
+
+  const handleOpenSlides = (lecture: LectureInfo) => {
+    setSelectedLecture(lecture);
+    setViewMode('slides');
+  };
+
+  const handleBackFromSlides = () => {
+    setViewMode('week');
+    setSelectedLecture(null);
   };
 
   const handleBackToWeek = () => {
@@ -97,6 +116,7 @@ const Index = () => {
             week={selectedWeek}
             onBack={handleBackToDashboard}
             onOpenReading={handleOpenReading}
+            onOpenSlides={handleOpenSlides}
           />
         )}
 
@@ -117,6 +137,16 @@ const Index = () => {
             weeks={modernSoftwareCourse.weeks}
             onBack={handleBackToDashboard}
             onMarkMastered={handleMarkMastered}
+          />
+        )}
+
+        {viewMode === 'slides' && selectedLecture && selectedWeek && (
+          <SlideViewer
+            lectureTitle={selectedLecture.title}
+            lectureDate={selectedLecture.date}
+            slidesUrl={selectedLecture.slidesUrl}
+            weekTitle={`Week ${selectedWeek.weekNumber}: ${selectedWeek.title}`}
+            onBack={handleBackFromSlides}
           />
         )}
       </main>

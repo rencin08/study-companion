@@ -2,10 +2,17 @@ import { WeekContent, Reading } from '@/types/study';
 import { ArrowLeft, BookOpen, Video, FileText, ClipboardList, Presentation, ExternalLink, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+interface LectureInfo {
+  title: string;
+  date: string;
+  slidesUrl: string;
+}
+
 interface WeekDetailProps {
   week: WeekContent;
   onBack: () => void;
   onOpenReading: (reading: Reading) => void;
+  onOpenSlides?: (lecture: LectureInfo) => void;
 }
 
 const getReadingIcon = (type: string) => {
@@ -34,7 +41,7 @@ const getTypeLabel = (type: string) => {
   }
 };
 
-export function WeekDetail({ week, onBack, onOpenReading }: WeekDetailProps) {
+export function WeekDetail({ week, onBack, onOpenReading, onOpenSlides }: WeekDetailProps) {
   return (
     <div className="animate-fade-in-up">
       {/* Back button */}
@@ -80,27 +87,28 @@ export function WeekDetail({ week, onBack, onOpenReading }: WeekDetailProps) {
             {week.lectures.map((lecture, idx) => (
               <div
                 key={idx}
-                className="flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 shadow-card"
+                onClick={() => lecture.slidesUrl && onOpenSlides?.({ 
+                  title: lecture.title, 
+                  date: lecture.date, 
+                  slidesUrl: lecture.slidesUrl 
+                })}
+                className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 shadow-card ${
+                  lecture.slidesUrl ? 'cursor-pointer transition-all hover:shadow-card-hover hover:border-primary/20 group' : ''
+                }`}
               >
                 <div className="flex items-center gap-4">
                   <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
                     <Presentation className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{lecture.title}</p>
+                    <p className={`font-medium text-foreground ${lecture.slidesUrl ? 'group-hover:text-primary transition-colors' : ''}`}>
+                      {lecture.title}
+                    </p>
                     <p className="text-sm text-muted-foreground">{lecture.date}</p>
                   </div>
                 </div>
                 {lecture.slidesUrl && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(lecture.slidesUrl, '_blank')}
-                    className="text-primary"
-                  >
-                    <span className="mr-2">Slides</span>
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                 )}
               </div>
             ))}
