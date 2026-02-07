@@ -14,8 +14,8 @@ export function Navbar({ onAddCourse }: NavbarProps) {
             <Brain className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="font-serif text-xl font-semibold text-foreground">StudyFlow</h1>
-            <p className="text-xs text-muted-foreground">AI-Powered Learning</p>
+            <h1 className="font-serif text-xl font-semibold text-foreground">TakeNotes</h1>
+            <p className="text-xs text-muted-foreground">AI-Powered Study Assistant</p>
           </div>
         </div>
 
