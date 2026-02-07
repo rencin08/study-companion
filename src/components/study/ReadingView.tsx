@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HighlightToolbar } from './HighlightToolbar';
-import { ExpandableTopicLink } from './ExpandableTopicLink';
+import { ExpandableTopicLink, TopicLinksGrid } from './ExpandableTopicLink';
 import { useFirecrawlScrape } from '@/hooks/useFirecrawlScrape';
 import { useAIChat } from '@/hooks/useAIChat';
 import ReactMarkdown from 'react-markdown';
@@ -185,6 +185,47 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
 
   const highlightedMarkdown = useMemo(() => applyHighlightsToContent(markdown), [markdown, currentHighlights]);
   const highlightedHtml = useMemo(() => applyHighlightsToContent(html), [html, currentHighlights]);
+
+  // Extract topic links from markdown for grid display
+  const { processedMarkdown, topicLinks } = useMemo(() => {
+    if (!highlightedMarkdown) return { processedMarkdown: '', topicLinks: [] };
+    
+    const topicPattern = /prompting|reasoning|generation|learning|thought|chain|shot|knowledge|engineer|retrieval|react|reflexion|multimodal|graph/i;
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const links: Array<{ text: string; href: string }> = [];
+    
+    // Find all topic links
+    let match;
+    while ((match = linkRegex.exec(highlightedMarkdown)) !== null) {
+      const [, text, href] = match;
+      if (
+        text && href &&
+        !href.startsWith('#') &&
+        !href.includes('twitter') &&
+        !href.includes('github') &&
+        !href.includes('linkedin') &&
+        text.length > 5 &&
+        text.length < 80 &&
+        topicPattern.test(text)
+      ) {
+        links.push({ text: text.trim(), href });
+      }
+    }
+    
+    // Remove topic links from markdown (they'll be rendered in the grid)
+    let processed = highlightedMarkdown;
+    for (const link of links) {
+      const escapedText = link.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedHref = link.href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(`\\[${escapedText}\\]\\(${escapedHref}\\)`, 'g');
+      processed = processed.replace(pattern, '');
+    }
+    
+    // Clean up extra whitespace left behind
+    processed = processed.replace(/\n{3,}/g, '\n\n').trim();
+    
+    return { processedMarkdown: processed, topicLinks: links };
+  }, [highlightedMarkdown]);
 
   const handleInternalLink = (href: string) => {
     // Resolve relative URLs to the source domain
@@ -396,60 +437,55 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                   />
                 ) : (
                   // Fallback to markdown rendering with expandable topic links
-                  <div className="prose prose-sm max-w-none dark:prose-invert selection:bg-accent selection:text-accent-foreground">
-                    <ReactMarkdown 
-                      remarkPlugins={[remarkGfm]}
-                      rehypePlugins={[rehypeRaw]}
-                      components={{
-                        a: ({ href, children }) => {
-                          const isAnchorLink = href?.startsWith('#');
-                          const linkText = typeof children === 'string' ? children : 
-                            Array.isArray(children) ? children.join('') : '';
-                          
-                          // Check if this looks like a topic/technique link (not navigation)
-                          const isTopicLink = href && 
-                            !isAnchorLink && 
-                            !href.includes('twitter') && 
-                            !href.includes('github') && 
-                            !href.includes('linkedin') &&
-                            linkText.length > 5 &&
-                            linkText.length < 80 &&
-                            /prompting|reasoning|generation|learning|thought|chain|shot|knowledge|engineer|retrieval|react|reflexion|multimodal|graph/i.test(linkText);
-                          
-                          if (isAnchorLink) {
+                  <div className="selection:bg-accent selection:text-accent-foreground">
+                    {/* Render topic links as a card grid */}
+                    {topicLinks.length > 0 && (
+                      <TopicLinksGrid>
+                        {topicLinks.map((link, index) => (
+                          <ExpandableTopicLink
+                            key={index}
+                            text={link.text}
+                            href={link.href}
+                            baseUrl={currentUrl}
+                          />
+                        ))}
+                      </TopicLinksGrid>
+                    )}
+                    
+                    {/* Render remaining markdown content */}
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                          a: ({ href, children }) => {
+                            const isAnchorLink = href?.startsWith('#');
+                            
+                            if (isAnchorLink) {
+                              return (
+                                <a href={href} className="text-primary underline hover:text-primary/80">
+                                  {children}
+                                </a>
+                              );
+                            }
+                            
                             return (
-                              <a href={href} className="text-primary underline hover:text-primary/80">
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  if (href) handleInternalLink(href);
+                                }}
+                                className="text-primary underline hover:text-primary/80 cursor-pointer bg-transparent border-none p-0 font-inherit text-left"
+                              >
                                 {children}
-                              </a>
+                              </button>
                             );
-                          }
-                          
-                          if (isTopicLink && href) {
-                            return (
-                              <ExpandableTopicLink
-                                text={linkText}
-                                href={href}
-                                baseUrl={currentUrl}
-                              />
-                            );
-                          }
-                          
-                          return (
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                if (href) handleInternalLink(href);
-                              }}
-                              className="text-primary underline hover:text-primary/80 cursor-pointer bg-transparent border-none p-0 font-inherit text-left"
-                            >
-                              {children}
-                            </button>
-                          );
-                        },
-                      }}
-                    >
-                      {highlightedMarkdown || ''}
-                    </ReactMarkdown>
+                          },
+                        }}
+                      >
+                        {processedMarkdown}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 )}
               </div>

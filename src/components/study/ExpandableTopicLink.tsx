@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Loader2, ExternalLink } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { FileText, Loader2, ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -32,7 +31,7 @@ export function ExpandableTopicLink({ text, href, baseUrl }: ExpandableTopicLink
   const fullUrl = resolveUrl(href);
 
   const fetchContent = async () => {
-    if (content) return; // Already fetched
+    if (content) return;
     
     setIsLoading(true);
     setError(null);
@@ -68,61 +67,63 @@ export function ExpandableTopicLink({ text, href, baseUrl }: ExpandableTopicLink
   };
 
   return (
-    <Collapsible open={isOpen} onOpenChange={handleToggle} className="mb-3">
-      <CollapsibleTrigger asChild>
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2 h-auto py-2 px-3 text-left hover:bg-secondary/50 group"
-        >
-          {isOpen ? (
-            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+    <Collapsible open={isOpen} onOpenChange={handleToggle} className="w-full">
+      <CollapsibleTrigger className="w-full">
+        <div className={`
+          flex items-center gap-3 p-4 rounded-lg border border-border bg-card 
+          hover:bg-secondary/50 hover:border-primary/20 transition-all cursor-pointer
+          ${isOpen ? 'border-primary/30 bg-secondary/30' : ''}
+        `}>
+          <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+          <span className="text-foreground font-medium text-left flex-1">{text}</span>
+          {isOpen && (
+            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           )}
-          <span className="text-primary underline underline-offset-2 group-hover:text-primary/80 font-medium">
-            {text}
-          </span>
-          <a
-            href={fullUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-          </a>
-        </Button>
+        </div>
       </CollapsibleTrigger>
       
-      <CollapsibleContent className="pl-9 pr-3 pb-4">
-        {isLoading ? (
-          <div className="flex items-center gap-2 text-muted-foreground py-4">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm">Loading content...</span>
-          </div>
-        ) : error ? (
-          <div className="text-sm text-destructive py-2">
-            {error}
-            <Button
-              variant="link"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                fetchContent();
-              }}
-              className="ml-2 h-auto p-0"
-            >
-              Retry
-            </Button>
-          </div>
-        ) : content ? (
-          <div className="prose prose-sm max-w-none dark:prose-invert border-l-2 border-primary/20 pl-4 mt-2">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {content}
-            </ReactMarkdown>
-          </div>
-        ) : null}
+      <CollapsibleContent>
+        <div className="mt-2 p-4 rounded-lg border border-border bg-muted/30">
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground py-4 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Loading content...</span>
+            </div>
+          ) : error ? (
+            <div className="text-sm text-destructive py-2 text-center">
+              {error}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fetchContent();
+                }}
+                className="ml-2 text-primary underline hover:no-underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : content ? (
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {content}
+              </ReactMarkdown>
+            </div>
+          ) : null}
+        </div>
       </CollapsibleContent>
     </Collapsible>
+  );
+}
+
+// Grid wrapper component for multiple topic links
+interface TopicLinksGridProps {
+  children: React.ReactNode;
+}
+
+export function TopicLinksGrid({ children }: TopicLinksGridProps) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 my-6 not-prose">
+      {children}
+    </div>
   );
 }
