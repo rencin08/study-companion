@@ -528,25 +528,24 @@
   }
 }
 
-/* Excalidraw compact styling */
+/* Excalidraw styling - ensure all elements are visible */
 .excalidraw-container {
   --color-primary: hsl(350 65% 42%);
+  position: relative;
 }
 
 .excalidraw-container .excalidraw {
   --ui-font: 'Inter', sans-serif !important;
+  --default-bg-color: hsl(40 30% 98%) !important;
 }
 
-/* Hide some UI elements for cleaner look */
-.excalidraw-container .excalidraw .welcome-screen-decor,
-.excalidraw-container .excalidraw .HelpDialog {
+/* Ensure Excalidraw SVGs and icons are visible */
+.excalidraw-container svg,
+.excalidraw-container .excalidraw svg {
+  display: inline-block !important;
+}
+
+/* Hide welcome screen decorations */
+.excalidraw-container .excalidraw .welcome-screen-decor {
   display: none !important;
-}
-
-/* Match warm paper background */
-.excalidraw-container .excalidraw {
-  --default-bg-color: hsl(40 30% 98%) !important;
-}
-.excalidraw-container .excalidraw {
-  --default-bg-color: hsl(40 30% 98%) !important;
 }
