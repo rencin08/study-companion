@@ -435,10 +435,44 @@
   .article-content [class*="subscribe"],
   .article-content [class*="signup"],
   .article-content [class*="cta"],
+  .article-content [class*="enroll"],
+  .article-content [class*="discount"],
+  .article-content [class*="course"],
   .article-content [id*="ad-"],
   .article-content [id*="ads-"],
   .article-content [id*="advertisement"],
   .article-content iframe:not([src*="youtube"]):not([src*="vimeo"]) {
+    display: none !important;
+  }
+
+  /* Hide promotional banners with background colors */
+  .article-content [style*="background"],
+  .article-content [style*="purple"],
+  .article-content [style*="violet"],
+  .article-content [style*="#8b5cf6"],
+  .article-content [style*="rgb(139"],
+  .article-content div[style*="background-color"] {
+    display: none !important;
+  }
+
+  /* Hide anchor tags that contain topic keywords (they're shown in the grid) */
+  .article-content a[href*="prompting"],
+  .article-content a[href*="reasoning"],
+  .article-content a[href*="generation"],
+  .article-content a[href*="thought"],
+  .article-content a[href*="chain"],
+  .article-content a[href*="shot"],
+  .article-content a[href*="knowledge"],
+  .article-content a[href*="retrieval"],
+  .article-content a[href*="reflexion"],
+  .article-content a[href*="multimodal"],
+  .article-content a[href*="consistency"],
+  .article-content a[href*="stimulus"],
+  .article-content a[href*="active-prompt"],
+  .article-content a[href*="engineer"],
+  .article-content a[href*="graph"],
+  .article-content a[href*="react"],
+  .article-content a[href*="aided"] {
     display: none !important;
   }
 

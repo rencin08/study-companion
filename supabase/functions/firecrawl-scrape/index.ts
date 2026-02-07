@@ -125,16 +125,21 @@ serve(async (req) => {
       .replace(/([^\n])\n([-*•])/g, '$1\n\n$2')
       .replace(/([^\n])\n(#{1,6}\s)/g, '$1\n\n$2');
     
-    // Clean HTML content similarly
+    // Clean HTML content - remove ads, banners, and topic links
     if (htmlContent) {
       const htmlCleanupPatterns = [
-        // Remove promotional banners and CTAs
-        /<[^>]*class="[^"]*(?:promo|banner|ad-|ads-|advertisement|sponsor|newsletter|subscribe|cta|enrollment)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+        // Remove promotional banners and CTAs - including purple background divs
+        /<div[^>]*(?:style="[^"]*background[^"]*purple[^"]*"|class="[^"]*(?:promo|banner|ad|cta|enroll)[^"]*")[^>]*>[\s\S]*?<\/div>/gi,
+        /<[^>]*class="[^"]*(?:promo|banner|ad-|ads-|advertisement|sponsor|newsletter|subscribe|cta|enrollment|discount)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+        // Remove elements with background styles (promotional banners)
+        /<[^>]*style="[^"]*background[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
         // Remove elements with promotional text
-        /🚀[^<]*(?:Enroll|enroll)[^<]*→?/gi,
-        /Master building[^<]*Enroll now[^<]*→?/gi,
+        /🚀[^<]*(?:Enroll|enroll|Master|Course|discount)[^<]*→?/gi,
+        /Master building[^<]*(?:Enroll|Claude)[^<]*→?/gi,
         /Use [A-Z0-9]+ for \d+% off[^<]*/gi,
         /Enroll now[^<]*→?/gi,
+        /EARLYBIRDCC3[^<]*/gi,
+        /20% off[^<]*/gi,
         // Remove last updated text
         /Last updated on[^<]*/gi,
         /Last updated[^<]*/gi,
@@ -145,6 +150,8 @@ serve(async (req) => {
         /Sponsored by[^<]*/gi,
         // Remove navigation footer links
         /Examples of Prompts[^<]*/gi,
+        // Remove topic navigation links (they'll be shown as cards)
+        /<a[^>]*href="[^"]*(?:prompting|reasoning|generation|thought|chain|shot|knowledge|retrieval|reflexion|multimodal|consistency|stimulus|engineer|graph|react|aided)[^"]*"[^>]*>[^<]*<\/a>/gi,
       ];
       
       for (const pattern of htmlCleanupPatterns) {
