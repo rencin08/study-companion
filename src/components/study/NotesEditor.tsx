@@ -150,8 +150,8 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Toolbar at top */}
-      <div className="flex flex-wrap items-center gap-0.5 p-2 border-b border-border bg-muted/30 sticky top-0 z-10">
+      {/* Toolbar at very top */}
+      <div className="flex flex-wrap items-center gap-0.5 p-2 border-b border-border bg-muted/30 shrink-0">
         <ToolbarButton
           icon={<Undo className="h-4 w-4" />}
           onClick={() => execCommand('undo')}
@@ -272,35 +272,40 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
         />
       </div>
 
-      {/* Editor - takes remaining space, ready to type immediately */}
-      <div className="flex-1 overflow-auto">
-        <div
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning
-          onInput={handleInput}
-          onKeyDown={handleKeyDown}
-          onBlur={saveContent}
-          className={cn(
-            "min-h-full p-6 outline-none prose prose-sm dark:prose-invert max-w-none",
-            "prose-headings:font-serif prose-headings:font-semibold",
-            "prose-h1:text-2xl prose-h1:mb-4 prose-h1:mt-6",
-            "prose-h2:text-xl prose-h2:mb-3 prose-h2:mt-5",
-            "prose-p:my-2 prose-p:leading-relaxed",
-            "prose-ul:my-2 prose-ol:my-2",
-            "prose-li:my-0.5",
-            "prose-blockquote:border-l-primary prose-blockquote:bg-muted/50 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r",
-            "prose-pre:bg-muted prose-pre:rounded-lg prose-pre:p-4",
-            "prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
-            "[&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground [&:empty]:before:pointer-events-none",
-            isEmpty && "before:content-['Start_taking_notes...'] before:text-muted-foreground before:pointer-events-none"
-          )}
-          data-placeholder="Start taking notes..."
-        />
+      {/* Editor area - fills remaining space, cursor starts here */}
+      <div 
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        onKeyDown={handleKeyDown}
+        onBlur={saveContent}
+        className={cn(
+          "flex-1 overflow-auto p-6 outline-none prose prose-sm dark:prose-invert max-w-none",
+          "prose-headings:font-serif prose-headings:font-semibold",
+          "prose-h1:text-2xl prose-h1:mb-4 prose-h1:mt-6",
+          "prose-h2:text-xl prose-h2:mb-3 prose-h2:mt-5",
+          "prose-p:my-2 prose-p:leading-relaxed",
+          "prose-ul:my-2 prose-ol:my-2",
+          "prose-li:my-0.5",
+          "prose-blockquote:border-l-primary prose-blockquote:bg-muted/50 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r",
+          "prose-pre:bg-muted prose-pre:rounded-lg prose-pre:p-4",
+          "prose-a:text-primary prose-a:no-underline hover:prose-a:underline"
+        )}
+        data-placeholder="Start taking notes..."
+        style={{
+          minHeight: 0
+        }}
+      >
+        {isEmpty && (
+          <span className="text-muted-foreground pointer-events-none">
+            Start taking notes...
+          </span>
+        )}
       </div>
 
-      {/* Status bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-muted/30 text-xs text-muted-foreground">
+      {/* Status bar at bottom */}
+      <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-muted/30 text-xs text-muted-foreground shrink-0">
         <span>Auto-saved to browser</span>
         <span>Press Ctrl+B for bold, Ctrl+I for italic</span>
       </div>
