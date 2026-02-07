@@ -24,14 +24,13 @@ serve(async (req) => {
 ${readingTitle ? `The student is currently reading: "${readingTitle}"` : ''}
 ${readingContent ? `\nHere is some context from the reading:\n${readingContent.substring(0, 2000)}` : ''}
 
-Your role is to:
-- Help explain concepts clearly and concisely
-- Answer questions about the material
-- Provide examples and analogies to aid understanding
-- Summarize key points when asked
-- Connect concepts to broader themes
+CRITICAL FORMATTING RULES:
+- NEVER use asterisks, bold, or italic formatting
+- Keep responses SHORT - 2-3 sentences max unless asked for more detail
+- Be direct and concise
+- Use plain text only, no markdown symbols
 
-Keep your responses focused and educational. Use clear formatting with bullet points or numbered lists when appropriate.`;
+Your role is to briefly explain concepts, answer questions, and help the student understand the material.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
