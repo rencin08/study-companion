@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HighlightToolbar } from './HighlightToolbar';
-import { ExpandableTopicLink, TopicLinksGrid } from './ExpandableTopicLink';
+import { TopicLinkCard, TopicLinksGrid } from './ExpandableTopicLink';
 import { useFirecrawlScrape } from '@/hooks/useFirecrawlScrape';
 import { useAIChat } from '@/hooks/useAIChat';
 import ReactMarkdown from 'react-markdown';
@@ -186,10 +186,11 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
   const highlightedMarkdown = useMemo(() => applyHighlightsToContent(markdown), [markdown, currentHighlights]);
   const highlightedHtml = useMemo(() => applyHighlightsToContent(html), [html, currentHighlights]);
 
-  // Extract topic links from markdown for grid display
+  // Extract topic links from markdown/HTML for grid display
   const { processedMarkdown, processedHtml, topicLinks } = useMemo(() => {
-    const topicPattern = /prompting|reasoning|generation|learning|thought|chain|shot|knowledge|engineer|retrieval|react|reflexion|multimodal|graph/i;
+    const topicPattern = /prompting|reasoning|generation|learning|thought|chain|shot|knowledge|engineer|retrieval|react|reflexion|multimodal|graph|consistency|stimulus|aided|active/i;
     const links: Array<{ text: string; href: string }> = [];
+    const seenTexts = new Set<string>();
     
     // Extract links from markdown
     if (highlightedMarkdown) {
@@ -197,59 +198,71 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
       let match;
       while ((match = linkRegex.exec(highlightedMarkdown)) !== null) {
         const [, text, href] = match;
+        const normalizedText = text.trim().toLowerCase();
         if (
           text && href &&
           !href.startsWith('#') &&
           !href.includes('twitter') &&
           !href.includes('github') &&
           !href.includes('linkedin') &&
-          text.length > 5 &&
+          !href.includes('youtube') &&
+          text.length > 3 &&
           text.length < 80 &&
-          topicPattern.test(text)
+          topicPattern.test(text) &&
+          !seenTexts.has(normalizedText)
         ) {
           links.push({ text: text.trim(), href });
+          seenTexts.add(normalizedText);
         }
       }
     }
     
-    // Also extract links from HTML if markdown didn't have them
-    if (links.length === 0 && highlightedHtml) {
+    // Also extract links from HTML
+    if (highlightedHtml) {
       const htmlLinkRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi;
       let match;
       while ((match = htmlLinkRegex.exec(highlightedHtml)) !== null) {
         const [, href, text] = match;
+        const normalizedText = text.trim().toLowerCase();
         if (
           text && href &&
           !href.startsWith('#') &&
           !href.includes('twitter') &&
           !href.includes('github') &&
           !href.includes('linkedin') &&
-          text.length > 5 &&
+          !href.includes('youtube') &&
+          text.length > 3 &&
           text.length < 80 &&
-          topicPattern.test(text)
+          topicPattern.test(text) &&
+          !seenTexts.has(normalizedText)
         ) {
           links.push({ text: text.trim(), href });
+          seenTexts.add(normalizedText);
         }
       }
     }
     
-    // Remove topic links from markdown
+    // Remove ALL topic-related links from markdown (be aggressive)
     let processedMd = highlightedMarkdown || '';
+    // Remove by matching the topic pattern in link text
+    processedMd = processedMd.replace(/\[([^\]]*(?:prompting|reasoning|generation|learning|thought|chain|shot|knowledge|engineer|retrieval|react|reflexion|multimodal|graph|consistency|stimulus|aided|active)[^\]]*)\]\([^)]+\)/gi, '');
+    // Also remove any links we specifically captured
     for (const link of links) {
       const escapedText = link.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const escapedHref = link.href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const pattern = new RegExp(`\\[${escapedText}\\]\\(${escapedHref}\\)`, 'g');
+      const pattern = new RegExp(`\\[${escapedText}\\]\\([^)]+\\)`, 'gi');
       processedMd = processedMd.replace(pattern, '');
     }
+    // Clean up whitespace
     processedMd = processedMd.replace(/\n{3,}/g, '\n\n').trim();
     
-    // Remove topic links from HTML
+    // Remove ALL topic-related links from HTML (be aggressive)
     let processedH = highlightedHtml || '';
+    // Remove anchor tags that contain topic keywords in their text
+    processedH = processedH.replace(/<a[^>]*>([^<]*(?:prompting|reasoning|generation|learning|thought|chain|shot|knowledge|engineer|retrieval|react|reflexion|multimodal|graph|consistency|stimulus|aided|active)[^<]*)<\/a>/gi, '');
+    // Also remove by specific captured links
     for (const link of links) {
       const escapedText = link.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const escapedHref = link.href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      // Match anchor tags with this href and text
-      const pattern = new RegExp(`<a[^>]*href=["']${escapedHref}["'][^>]*>${escapedText}<\\/a>`, 'gi');
+      const pattern = new RegExp(`<a[^>]*>${escapedText}<\\/a>`, 'gi');
       processedH = processedH.replace(pattern, '');
     }
     
@@ -465,11 +478,12 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                     {topicLinks.length > 0 && (
                       <TopicLinksGrid>
                         {topicLinks.map((link, index) => (
-                          <ExpandableTopicLink
+                          <TopicLinkCard
                             key={index}
                             text={link.text}
                             href={link.href}
                             baseUrl={currentUrl}
+                            onNavigate={handleInternalLink}
                           />
                         ))}
                       </TopicLinksGrid>
@@ -487,11 +501,12 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                     {topicLinks.length > 0 && (
                       <TopicLinksGrid>
                         {topicLinks.map((link, index) => (
-                          <ExpandableTopicLink
+                          <TopicLinkCard
                             key={index}
                             text={link.text}
                             href={link.href}
                             baseUrl={currentUrl}
+                            onNavigate={handleInternalLink}
                           />
                         ))}
                       </TopicLinksGrid>
