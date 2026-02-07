@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useMemo, Fragment } from 'react';
-import { Reading, ChatMessage, Flashcard, Note, Highlight } from '@/types/study';
-import { ArrowLeft, Send, Plus, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2, ExternalLink, Play, FileText, Code } from 'lucide-react';
+import { Reading, ChatMessage, Flashcard, Highlight } from '@/types/study';
+import { ArrowLeft, Send, Highlighter, Brain, MessageSquare, StickyNote, X, Sparkles, Loader2, ExternalLink, Play, FileText, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HighlightToolbar } from './HighlightToolbar';
 import { TopicLinkCard, TopicLinksGrid } from './ExpandableTopicLink';
+import { NotesEditor } from './NotesEditor';
 import { useFirecrawlScrape } from '@/hooks/useFirecrawlScrape';
 import { useAIChat } from '@/hooks/useAIChat';
 import ReactMarkdown from 'react-markdown';
@@ -38,8 +39,6 @@ interface ReadingViewProps {
 }
 
 export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onCreateHighlight, highlights }: ReadingViewProps) {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [currentNote, setCurrentNote] = useState('');
   const [inputMessage, setInputMessage] = useState('');
   const [selectedText, setSelectedText] = useState('');
   const [showFlashcardModal, setShowFlashcardModal] = useState(false);
@@ -125,21 +124,6 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
     await sendMessage(message);
   };
 
-  const handleAddNote = () => {
-    if (currentNote.trim()) {
-      const newNote: Note = {
-        id: Date.now().toString(),
-        content: currentNote,
-        weekId: reading.id.split('-')[0] + '-' + reading.id.split('-')[1],
-        readingId: reading.id,
-        highlightedText: selectedText || undefined,
-        createdAt: new Date()
-      };
-      setNotes(prev => [...prev, newNote]);
-      setCurrentNote('');
-      setSelectedText('');
-    }
-  };
 
   const getHighlightColorClass = (color: Highlight['color']) => {
     switch (color) {
@@ -586,7 +570,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 px-4"
                 >
                   <StickyNote className="h-4 w-4 mr-2" />
-                  Notes ({notes.length})
+                  Notes
                 </TabsTrigger>
               </TabsList>
 
@@ -652,44 +636,11 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                 </div>
               </TabsContent>
 
-              <TabsContent value="notes" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-3">
-                    {notes.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>No notes yet. Start taking notes below!</p>
-                      </div>
-                    ) : (
-                      notes.map((note) => (
-                        <div key={note.id} className="p-3 bg-secondary rounded-lg">
-                          {note.highlightedText && (
-                            <div className="text-xs text-muted-foreground mb-2 border-l-2 border-accent pl-2">
-                              "{note.highlightedText}"
-                            </div>
-                          )}
-                          <p className="text-sm">{note.content}</p>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {note.createdAt.toLocaleTimeString()}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-                
-                <div className="p-4 border-t border-border">
-                  <Textarea
-                    value={currentNote}
-                    onChange={(e) => setCurrentNote(e.target.value)}
-                    placeholder="Write a note..."
-                    className="min-h-[80px] resize-none mb-2"
-                  />
-                  <Button onClick={handleAddNote} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Note
-                  </Button>
-                </div>
+              <TabsContent value="notes" className="flex-1 flex flex-col m-0 data-[state=active]:flex overflow-hidden">
+                <NotesEditor
+                  readingId={reading.id}
+                  weekId={reading.id.split('-')[0] + '-' + reading.id.split('-')[1]}
+                />
               </TabsContent>
             </Tabs>
           </div>
