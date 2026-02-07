@@ -445,14 +445,20 @@
     display: none !important;
   }
 
-  /* Hide promotional banners with background colors */
-  .article-content [style*="background"],
-  .article-content [style*="purple"],
-  .article-content [style*="violet"],
-  .article-content [style*="#8b5cf6"],
-  .article-content [style*="rgb(139"],
-  .article-content div[style*="background-color"] {
+  /* Hide promotional banners with purple/violet background colors - be specific */
+  .article-content > div[style*="background-color: rgb(139"],
+  .article-content > div[style*="background-color: #8b5cf6"],
+  .article-content > div[style*="background: rgb(139"],
+  .article-content > div[style*="purple"],
+  .article-content > div[style*="violet"] {
     display: none !important;
+  }
+  
+  /* Ensure text is selectable */
+  .article-content,
+  .article-content * {
+    user-select: text !important;
+    -webkit-user-select: text !important;
   }
 
   /* Hide anchor tags that contain topic keywords (they're shown in the grid) */
