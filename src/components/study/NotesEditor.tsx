@@ -4,10 +4,16 @@ import {
   Bold, Italic, Underline, List, ListOrdered, 
   Heading1, Heading2, Quote, Undo, Redo, 
   AlignLeft, AlignCenter, AlignRight, Code, Link,
-  Strikethrough
+  Strikethrough, ChevronDown
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface NotesEditorProps {
   readingId: string;
@@ -40,10 +46,25 @@ function ToolbarButton({ icon, onClick, active, title }: ToolbarButtonProps) {
   );
 }
 
+const FONT_SIZES = [
+  { label: 'Small', value: '1' },
+  { label: 'Normal', value: '3' },
+  { label: 'Large', value: '5' },
+  { label: 'Huge', value: '7' },
+];
+
 export function NotesEditor({ readingId, weekId, initialContent, onContentChange }: NotesEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isEmpty, setIsEmpty] = useState(true);
+  const [currentFontSize, setCurrentFontSize] = useState('Normal');
   const storageKey = `notes-${weekId}-${readingId}`;
+
+  // Auto-focus editor on mount
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+  }, []);
 
   // Load saved content on mount
   useEffect(() => {
@@ -88,7 +109,6 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Handle keyboard shortcuts
     if (e.metaKey || e.ctrlKey) {
       switch (e.key.toLowerCase()) {
         case 'b':
@@ -123,10 +143,15 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
     }
   };
 
+  const handleFontSize = (size: { label: string; value: string }) => {
+    execCommand('fontSize', size.value);
+    setCurrentFontSize(size.label);
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 p-2 border-b border-border bg-muted/30">
+      {/* Toolbar at top */}
+      <div className="flex flex-wrap items-center gap-0.5 p-2 border-b border-border bg-muted/30 sticky top-0 z-10">
         <ToolbarButton
           icon={<Undo className="h-4 w-4" />}
           onClick={() => execCommand('undo')}
@@ -137,6 +162,29 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
           onClick={() => execCommand('redo')}
           title="Redo (Ctrl+Shift+Z)"
         />
+        
+        <Separator orientation="vertical" className="h-6 mx-1" />
+
+        {/* Font Size Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 px-2 gap-1">
+              <span className="text-xs">{currentFontSize}</span>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {FONT_SIZES.map((size) => (
+              <DropdownMenuItem
+                key={size.value}
+                onClick={() => handleFontSize(size)}
+                className={cn(currentFontSize === size.label && "bg-accent")}
+              >
+                {size.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         
         <Separator orientation="vertical" className="h-6 mx-1" />
         
@@ -224,7 +272,7 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
         />
       </div>
 
-      {/* Editor */}
+      {/* Editor - takes remaining space, ready to type immediately */}
       <div className="flex-1 overflow-auto">
         <div
           ref={editorRef}
