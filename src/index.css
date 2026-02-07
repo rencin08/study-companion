@@ -537,47 +537,16 @@
   --ui-font: 'Inter', sans-serif !important;
 }
 
-/* Scale down the toolbar */
-.excalidraw-container .excalidraw .Island {
-  transform: scale(0.85);
-  transform-origin: top left;
-}
-
-.excalidraw-container .excalidraw .App-menu {
-  transform: scale(0.85);
-  transform-origin: top left;
-}
-
-/* Smaller toolbar buttons */
-.excalidraw-container .excalidraw .ToolIcon_type_button,
-.excalidraw-container .excalidraw .ToolIcon_type_floating {
-  width: 28px !important;
-  height: 28px !important;
-}
-
-.excalidraw-container .excalidraw .ToolIcon__icon {
-  width: 18px !important;
-  height: 18px !important;
-}
-
-/* Compact side panels */
-.excalidraw-container .excalidraw .layer-ui__wrapper__top-right {
-  transform: scale(0.85);
-  transform-origin: top right;
-}
-
-.excalidraw-container .excalidraw .layer-ui__wrapper__footer {
-  transform: scale(0.85);
-  transform-origin: bottom left;
-}
-
 /* Hide some UI elements for cleaner look */
-.excalidraw-container .excalidraw .HelpDialog,
-.excalidraw-container .excalidraw .welcome-screen-decor {
+.excalidraw-container .excalidraw .welcome-screen-decor,
+.excalidraw-container .excalidraw .HelpDialog {
   display: none !important;
 }
 
 /* Match warm paper background */
+.excalidraw-container .excalidraw {
+  --default-bg-color: hsl(40 30% 98%) !important;
+}
 .excalidraw-container .excalidraw {
   --default-bg-color: hsl(40 30% 98%) !important;
 }

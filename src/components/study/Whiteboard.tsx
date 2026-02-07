@@ -105,6 +105,10 @@ export function Whiteboard({ weekId }: WhiteboardProps) {
                 export: false,
                 saveAsImage: false,
               },
+              tools: {
+                image: false,
+              },
+              dockedSidebarBreakpoint: 0,
             }}
           />
         </div>
