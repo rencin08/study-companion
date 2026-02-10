@@ -636,13 +636,11 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                 </div>
               </TabsContent>
 
-              <TabsContent value="notes" className="flex-1 m-0 p-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden">
-                <div className="flex flex-col h-full w-full">
-                  <NotesEditor
-                    readingId={reading.id}
-                    weekId={reading.id.split('-')[0] + '-' + reading.id.split('-')[1]}
-                  />
-                </div>
+              <TabsContent value="notes" className="flex-1 m-0 p-0 overflow-hidden" style={{ display: 'flex', flexDirection: 'column' }}>
+                <NotesEditor
+                  readingId={reading.id}
+                  weekId={reading.id.split('-')[0] + '-' + reading.id.split('-')[1]}
+                />
               </TabsContent>
             </Tabs>
           </div>
