@@ -574,7 +574,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="chat" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
+              <TabsContent value="chat" className="flex-1 flex flex-col mt-0 data-[state=active]:flex overflow-hidden">
                 <ScrollArea className="flex-1 p-4">
                   <div className="space-y-4">
                     {messages.map((message) => (
@@ -636,7 +636,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                 </div>
               </TabsContent>
 
-              <TabsContent value="notes" className="flex-1 m-0 p-0 overflow-hidden" style={{ display: 'flex', flexDirection: 'column' }}>
+              <TabsContent value="notes" className="flex-1 flex flex-col mt-0 p-0 overflow-hidden data-[state=inactive]:hidden">
                 <NotesEditor
                   readingId={reading.id}
                   weekId={reading.id.split('-')[0] + '-' + reading.id.split('-')[1]}
