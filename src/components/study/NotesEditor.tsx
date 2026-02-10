@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, forwardRef } from 'react';
 import { 
   Bold, Italic, Undo, Redo, List, ListOrdered, 
   Link, ChevronDown, Trash2
@@ -24,6 +24,22 @@ const BLOCK_FORMATS = [
   { label: 'Heading 2', value: 'h2', tag: 'h2' },
   { label: 'Heading 3', value: 'h3', tag: 'h3' },
 ];
+
+const TBtn = forwardRef<HTMLButtonElement, { children: React.ReactNode; onClick: () => void; title: string }>(
+  ({ children, onClick, title, ...props }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+      title={title}
+      className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-accent/60 text-foreground/70 hover:text-foreground transition-colors"
+      {...props}
+    >
+      {children}
+    </button>
+  )
+);
+TBtn.displayName = 'TBtn';
 
 export function NotesEditor({ readingId, weekId, initialContent, onContentChange }: NotesEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -74,18 +90,6 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
     const url = prompt('Enter URL:');
     if (url) exec('createLink', url);
   };
-
-  // Simple icon button for toolbar
-  const TBtn = ({ children, onClick, title }: { children: React.ReactNode; onClick: () => void; title: string }) => (
-    <button
-      type="button"
-      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
-      title={title}
-      className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-accent/60 text-foreground/70 hover:text-foreground transition-colors"
-    >
-      {children}
-    </button>
-  );
 
   return (
     <div className="flex flex-col h-full w-full bg-background">
