@@ -445,25 +445,27 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                     <p className="text-xs mt-2">This may take a few seconds</p>
                   </div>
                 ) : contentError || (!markdown && !html) ? (
-                  <div className="flex flex-col items-center justify-center h-[400px] text-center">
-                    <div className="bg-muted/50 rounded-full p-4 mb-4">
-                      <Highlighter className="h-8 w-8 text-muted-foreground" />
+                  <div className="flex flex-col h-full min-h-[400px]">
+                    <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border rounded-t-lg">
+                      <span className="text-sm text-muted-foreground">
+                        Showing original page — content extraction unavailable
+                      </span>
+                      <a
+                        href={currentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Open in new tab
+                      </a>
                     </div>
-                    <h3 className="font-semibold text-lg mb-2">Content Preview Unavailable</h3>
-                    <p className="text-muted-foreground mb-4 max-w-md">
-                      {contentError || "This content cannot be extracted. Please view the original."}
-                    </p>
-                    <a 
-                      href={reading.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
-                    >
-                      Open in new tab →
-                    </a>
-                    <p className="text-xs text-muted-foreground mt-4">
-                      Tip: You can still take notes and chat with AI about this reading
-                    </p>
+                    <iframe
+                      src={currentUrl}
+                      title={reading.title}
+                      className="flex-1 w-full min-h-[500px] border-0"
+                      sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                    />
                   </div>
                 ) : viewMode === 'html' && highlightedHtml ? (
                   // Render HTML with original article styling + topic cards
@@ -574,7 +576,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="chat" className="flex-1 flex flex-col mt-0 data-[state=active]:flex overflow-hidden">
+              <TabsContent value="chat" className="flex-1 flex flex-col mt-0 data-[state=active]:flex data-[state=inactive]:hidden overflow-hidden">
                 <ScrollArea className="flex-1 p-4">
                   <div className="space-y-4">
                     {messages.map((message) => (
@@ -636,7 +638,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                 </div>
               </TabsContent>
 
-              <TabsContent value="notes" className="flex-1 mt-0 p-0 overflow-hidden relative data-[state=inactive]:hidden">
+              <TabsContent value="notes" className="flex-1 flex flex-col mt-0 p-0 overflow-hidden data-[state=active]:flex data-[state=inactive]:hidden">
                 <NotesEditor
                   readingId={reading.id}
                   weekId={reading.id.split('-')[0] + '-' + reading.id.split('-')[1]}

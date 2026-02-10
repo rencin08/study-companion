@@ -92,7 +92,7 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-background absolute inset-0">
+    <div className="flex flex-col flex-1 min-h-0 w-full bg-background">
       {/* Toolbar pinned at top */}
       <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border bg-muted/20 shrink-0">
         <TBtn onClick={() => exec('undo')} title="Undo"><Undo className="h-4 w-4" /></TBtn>
