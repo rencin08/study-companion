@@ -92,8 +92,8 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-background">
-      {/* Toolbar — matches NotebookLM: undo/redo, block format dropdown, B, I, link, lists, clear */}
+    <div className="flex flex-col h-full w-full bg-background absolute inset-0">
+      {/* Toolbar pinned at top */}
       <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border bg-muted/20 shrink-0">
         <TBtn onClick={() => exec('undo')} title="Undo"><Undo className="h-4 w-4" /></TBtn>
         <TBtn onClick={() => exec('redo')} title="Redo"><Redo className="h-4 w-4" /></TBtn>
@@ -137,8 +137,8 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
         <TBtn onClick={clearNotes} title="Clear notes"><Trash2 className="h-4 w-4" /></TBtn>
       </div>
 
-      {/* Full-height writing surface */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Writing surface fills remaining space */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div
           ref={editorRef}
           contentEditable
@@ -150,7 +150,6 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
           className={cn(
             "min-h-full w-full px-6 py-4 outline-none",
             "text-[15px] leading-7 text-foreground",
-            // Prose styles
             "[&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:mt-4 [&_h1]:mb-2",
             "[&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1.5",
             "[&_h3]:text-lg [&_h3]:font-medium [&_h3]:mt-2 [&_h3]:mb-1",
@@ -159,9 +158,7 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
             "[&_li]:my-0.5",
             "[&_a]:text-primary [&_a]:underline",
             "[&_blockquote]:border-l-2 [&_blockquote]:border-primary/40 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground",
-            // Placeholder
             "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50 empty:before:pointer-events-none",
-            // Selection
             "selection:bg-primary/20 caret-primary"
           )}
           style={{ wordWrap: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-wrap' }}
