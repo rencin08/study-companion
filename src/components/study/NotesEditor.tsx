@@ -125,7 +125,7 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col items-stretch justify-start">
       {/* Editor area fills remaining space, cursor starts at top */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div
@@ -137,7 +137,7 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
           onBlur={saveContent}
           data-placeholder="Start typing your notes..."
           className={cn(
-            "w-full px-6 py-4 outline-none min-h-[200px] h-full",
+            "w-full px-6 py-4 outline-none min-h-[200px]",
             "text-[15px] leading-7 text-foreground",
             "[&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:mt-4 [&_h1]:mb-2",
             "[&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1.5",
@@ -147,10 +147,10 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
             "[&_li]:my-0.5",
             "[&_a]:text-primary [&_a]:underline",
             "[&_blockquote]:border-l-2 [&_blockquote]:border-primary/40 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground",
-            "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50 empty:before:pointer-events-none",
+            "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50 empty:before:pointer-events-none empty:before:block",
             "selection:bg-primary/20 caret-primary"
           )}
-          style={{ wordWrap: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-wrap' }}
+          style={{ display: 'block', wordWrap: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-wrap' }}
         />
       </div>
 

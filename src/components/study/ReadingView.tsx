@@ -636,7 +636,7 @@ export function ReadingView({ reading, weekTitle, onBack, onCreateFlashcard, onC
                 </div>
               </TabsContent>
 
-              <TabsContent value="notes" className="flex-1 mt-0 p-0 overflow-hidden relative data-[state=inactive]:hidden">
+              <TabsContent value="notes" className="flex-1 mt-0 p-0 overflow-hidden data-[state=inactive]:hidden">
                 <NotesEditor
                   readingId={reading.id}
                   weekId={reading.id.split('-')[0] + '-' + reading.id.split('-')[1]}
