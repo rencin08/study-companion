@@ -1,7 +1,7 @@
-import { useRef, useEffect, useCallback, forwardRef } from 'react';
+import { useRef, useEffect, useCallback, useState, forwardRef } from 'react';
 import { 
   Bold, Italic, Undo, Redo, List, ListOrdered, 
-  Link, ChevronDown, Trash2
+  Link, ChevronDown, Trash2, Check, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -41,27 +41,56 @@ const TBtn = forwardRef<HTMLButtonElement, { children: React.ReactNode; onClick:
 );
 TBtn.displayName = 'TBtn';
 
+type SaveStatus = 'idle' | 'saving' | 'saved';
+
 export function NotesEditor({ readingId, weekId, initialContent, onContentChange }: NotesEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const storageKey = `notes-${weekId}-${readingId}`;
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!editorRef.current) return;
     const saved = localStorage.getItem(storageKey);
     editorRef.current.innerHTML = saved || initialContent || '';
+    if (saved) {
+      setLastSaved(new Date());
+      setSaveStatus('saved');
+    }
   }, [storageKey, initialContent]);
+
+  // Focus editor on mount so cursor starts at top
+  useEffect(() => {
+    editorRef.current?.focus();
+  }, []);
 
   const saveContent = useCallback(() => {
     if (!editorRef.current) return;
+    setSaveStatus('saving');
     const content = editorRef.current.innerHTML;
     localStorage.setItem(storageKey, content);
     onContentChange?.(content);
+    const now = new Date();
+    setLastSaved(now);
+    // Brief "Saving…" then switch to "Saved"
+    setTimeout(() => setSaveStatus('saved'), 300);
   }, [storageKey, onContentChange]);
 
-  useEffect(() => {
-    const timer = setInterval(saveContent, 2000);
-    return () => clearInterval(timer);
+  const debouncedSave = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setSaveStatus('saving');
+    debounceRef.current = setTimeout(() => {
+      saveContent();
+    }, 500);
   }, [saveContent]);
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const exec = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value);
@@ -91,10 +120,42 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
     if (url) exec('createLink', url);
   };
 
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
-    <div className="flex flex-col h-full w-full bg-background absolute inset-0">
-      {/* Toolbar pinned at top */}
-      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border bg-muted/20 shrink-0">
+    <div className="h-full flex flex-col">
+      {/* Editor area fills remaining space, cursor starts at top */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={debouncedSave}
+          onKeyDown={handleKeyDown}
+          onBlur={saveContent}
+          data-placeholder="Start typing your notes..."
+          className={cn(
+            "w-full px-6 py-4 outline-none min-h-[200px] h-full",
+            "text-[15px] leading-7 text-foreground",
+            "[&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:mt-4 [&_h1]:mb-2",
+            "[&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1.5",
+            "[&_h3]:text-lg [&_h3]:font-medium [&_h3]:mt-2 [&_h3]:mb-1",
+            "[&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2",
+            "[&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2",
+            "[&_li]:my-0.5",
+            "[&_a]:text-primary [&_a]:underline",
+            "[&_blockquote]:border-l-2 [&_blockquote]:border-primary/40 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground",
+            "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50 empty:before:pointer-events-none",
+            "selection:bg-primary/20 caret-primary"
+          )}
+          style={{ wordWrap: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-wrap' }}
+        />
+      </div>
+
+      {/* Toolbar pinned to bottom */}
+      <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 border-t border-border bg-muted/20">
         <TBtn onClick={() => exec('undo')} title="Undo"><Undo className="h-4 w-4" /></TBtn>
         <TBtn onClick={() => exec('redo')} title="Redo"><Redo className="h-4 w-4" /></TBtn>
 
@@ -134,35 +195,23 @@ export function NotesEditor({ readingId, weekId, initialContent, onContentChange
 
         <div className="flex-1" />
 
-        <TBtn onClick={clearNotes} title="Clear notes"><Trash2 className="h-4 w-4" /></TBtn>
-      </div>
-
-      {/* Writing surface fills remaining space */}
-      <div className="flex-1 overflow-y-auto min-h-0">
-        <div
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning
-          onInput={saveContent}
-          onKeyDown={handleKeyDown}
-          onBlur={saveContent}
-          data-placeholder="Start typing your notes..."
-          className={cn(
-            "min-h-full w-full px-6 py-4 outline-none",
-            "text-[15px] leading-7 text-foreground",
-            "[&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:mt-4 [&_h1]:mb-2",
-            "[&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1.5",
-            "[&_h3]:text-lg [&_h3]:font-medium [&_h3]:mt-2 [&_h3]:mb-1",
-            "[&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2",
-            "[&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2",
-            "[&_li]:my-0.5",
-            "[&_a]:text-primary [&_a]:underline",
-            "[&_blockquote]:border-l-2 [&_blockquote]:border-primary/40 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground",
-            "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50 empty:before:pointer-events-none",
-            "selection:bg-primary/20 caret-primary"
+        {/* Save status */}
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
+          {saveStatus === 'saving' && (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Saving…</span>
+            </>
           )}
-          style={{ wordWrap: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-wrap' }}
-        />
+          {saveStatus === 'saved' && lastSaved && (
+            <>
+              <Check className="h-3 w-3 text-primary" />
+              <span>Saved {formatTime(lastSaved)}</span>
+            </>
+          )}
+        </div>
+
+        <TBtn onClick={clearNotes} title="Clear notes"><Trash2 className="h-4 w-4" /></TBtn>
       </div>
     </div>
   );
